@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D 미로 탈출 게임</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <!-- 게임 UI -->
+      <div id="ui-overlay">
+        <div id="game-info">
+          <div id="timer">시간: <span id="time">0</span>초</div>
+          <div id="level">레벨: <span id="current-level">1</span></div>
+                     <div id="instructions">
+             <p>화살표 키 또는 WASD로 이동하세요</p>
+             <p>마우스로 화면을 돌려보세요</p>
+             <p>화면을 클릭하면 마우스 조작이 활성화됩니다</p>
+             <p>ESC 키로 마우스 조작을 해제할 수 있습니다</p>
+             <p>빨간 블록에 도달하면 다음 레벨로!</p>
+           </div>
+        </div>
+
+        <!-- 시작 화면 -->
+        <div id="start-screen">
+          <h1>🎮 3D 미로 탈출</h1>
+          <p>1인칭 시점으로 미로를 탈출하여 목표 지점에 도달하세요!</p>
+          <p>WASD로 이동, 마우스로 시점을 돌리세요</p>
+          <button id="start-button">게임 시작</button>
+        </div>
+
+        <!-- 승리 화면 -->
+        <div id="win-screen" class="hidden">
+          <h2>🎉 레벨 클리어!</h2>
+          <p>완료 시간: <span id="completion-time"></span>초</p>
+          <button id="next-level-button">다음 레벨</button>
+          <button id="restart-button">다시 시작</button>
+        </div>
+
+        <!-- 게임 오버 화면 -->
+        <div id="game-over-screen" class="hidden">
+          <h2>🏁 게임 완료!</h2>
+          <p>모든 레벨을 클리어했습니다!</p>
+          <p>총 완료 시간: <span id="total-time"></span>초</p>
+          <button id="play-again-button">다시 플레이</button>
+        </div>
+      </div>
+
+      <!-- Three.js 캔버스가 여기에 추가됩니다 -->
+      <canvas id="game-canvas"></canvas>
+    </div>
+
+    <!-- Three.js 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- 게임 스크립트 -->
+    <script src="game.js"></script>
+  </body>
+</html>
