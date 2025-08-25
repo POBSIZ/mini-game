@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini Games</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR",
+          "Malgun Gothic", sans-serif;
+        line-height: 1.5;
+        display: grid;
+        min-height: 100dvh;
+        grid-template-rows: auto 1fr auto;
+        background: radial-gradient(
+            60% 80% at 50% 0%,
+            rgba(0, 0, 0, 0.06),
+            transparent 60%
+          )
+          no-repeat;
+        padding: 24px;
+      }
+      header,
+      footer {
+        max-width: 960px;
+        margin: 0 auto;
+        width: 100%;
+      }
+      header {
+        padding: 12px 0 8px;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 4px;
+      }
+      p.lead {
+        margin: 0;
+        opacity: 0.8;
+      }
+
+      .grid {
+        max-width: 960px;
+        margin: 24px auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        width: 100%;
+      }
+
+      a.card {
+        display: block;
+        text-decoration: none;
+        border: 1px solid rgba(127, 127, 127, 0.25);
+        border-radius: 12px;
+        padding: 16px;
+        backdrop-filter: blur(4px);
+        background: color-mix(in oklab, Canvas 92%, transparent);
+        transition: transform 120ms ease, border-color 120ms ease,
+          background 120ms ease;
+        color: inherit;
+      }
+      a.card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(127, 127, 127, 0.45);
+      }
+      .card h2 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      .card p {
+        margin: 0;
+        opacity: 0.8;
+        font-size: 14px;
+      }
+
+      footer {
+        opacity: 0.7;
+        font-size: 12px;
+        padding: 8px 0;
+      }
+    </style>
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Project root launcher for mini games" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%2300aaff'/%3E%3Ctext x='50' y='58' font-size='44' text-anchor='middle' fill='white' font-family='Arial,Helvetica,sans-serif'%3E🎮%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <header>
+      <h1>미니 게임 모음</h1>
+      <p class="lead">아래 목록에서 게임을 선택하세요.</p>
+    </header>
+
+    <main class="grid" aria-label="game list">
+      <a class="card" href="./3d-maze-escape/index.html">
+        <h2>3D Maze Escape</h2>
+        <p>3D 미로에서 탈출하세요. 키보드/마우스로 탐험!</p>
+      </a>
+
+      <a class="card" href="./dice-battle/">
+        <h2>Dice Battle</h2>
+        <p>주사위 전투 게임. 현재 문서/구조 확인 페이지로 이동합니다.</p>
+      </a>
+    </main>
+
+    <footer>
+      <span>Root launcher page · /mini-game</span>
+    </footer>
+  </body>
+</html>
