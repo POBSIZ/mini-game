@@ -1,7 +1,7 @@
 import { createInitialState } from "./src/core/initial-state.js";
 import { runRound, startRound, finalizeRound } from "./src/core/engine.js";
 import { startRoundAi } from "./src/core/engine-ai.js";
-import { useCard } from "./src/systems/cards.js";
+import { useCard, canUseCard } from "./src/systems/cards.js";
 import { createAI } from "./src/ai/ai.js";
 import { createShield } from "./src/systems/shield.js";
 import { emit, on } from "./src/shared/events.js";
@@ -25,19 +25,22 @@ const aiEnergyEl = document.getElementById("ai-energy");
 const aiShieldsEl = document.getElementById("ai-shields");
 const aiGaugeEl = document.getElementById("ai-gauge");
 const roundIndexEl = document.getElementById("round-index");
+const roundsTotalEl = document.getElementById("rounds-total");
 const roundRollEl = document.getElementById("round-roll");
-const roundTendencyEl = document.getElementById("round-tendency");
-const preDefenseBtn = document.getElementById("btn-pre-defense");
-const preBoostBtn = document.getElementById("btn-pre-boost");
-const playRoundBtn = document.getElementById("btn-play-round");
-const newGameBtn = document.getElementById("btn-new-game");
-const meHandEl = document.getElementById("me-hand");
 const startRoundBtn = document.getElementById("btn-start-round");
 const finalizeRoundBtn = document.getElementById("btn-finalize-round");
-const postAttackBtn = document.getElementById("btn-post-attack");
-const postStealBtn = document.getElementById("btn-post-steal");
-const postResetBtn = document.getElementById("btn-post-reset");
 const makeShieldBtn = document.getElementById("btn-make-shield");
+const newGameBtn = document.getElementById("btn-new-game");
+const handEl = document.getElementById("hand");
+const eventFeedEl = document.getElementById("event-feed");
+const meResTray = document.getElementById("me-reservations");
+const aiResTray = document.getElementById("ai-reservations");
+const meCardsCountEl = document.getElementById("me-cards-count");
+const aiCardsCountEl = document.getElementById("ai-cards-count");
+const phaseBadgeEl = document.getElementById("phase-badge");
+const rollBadgeEl = document.getElementById("roll-badge");
+const tendencyToggleEl = document.getElementById("tendency-toggle");
+const confirmTendencyBtn = document.getElementById("btn-confirm-tendency");
 
 function write(obj) {
   logEl.textContent +=
@@ -47,6 +50,7 @@ function write(obj) {
 on("phase:*", (p) => write(["event", p]));
 
 let gameState = null;
+let selectedTendency = null;
 
 function updateUI(state) {
   setNum(meTotalEl, state.players.me.total);
@@ -59,8 +63,13 @@ function updateUI(state) {
   setNum(aiGaugeEl, state.players.ai.gauge);
   roundIndexEl.textContent = state.round.index;
   roundRollEl.textContent = state.round.roll ?? "-";
-  meHandEl.textContent =
-    state.players.me.cards.map((c) => c.type).join(", ") || "-";
+  if (roundsTotalEl) roundsTotalEl.textContent = state.config.rounds || 8;
+
+  renderTendencyToggle(state);
+  renderHand(state);
+  renderReservations(state);
+  setPhaseBadge(state);
+  updateButtonsByPhase(state);
 
   // End-of-game banner
   const totalRounds = state.config.rounds || 8;
@@ -93,15 +102,6 @@ function updateUI(state) {
     banner.textContent = "";
   }
 
-  // Button enable/disable by phase
-  const rolled = state.round.roll !== null;
-  preDefenseBtn.disabled = rolled;
-  preBoostBtn.disabled = rolled;
-  startRoundBtn.disabled = rolled; // can't start again if already rolled
-  finalizeRoundBtn.disabled = !rolled; // finalize only after roll
-  postAttackBtn.disabled = !rolled;
-  postStealBtn.disabled = !rolled;
-  postResetBtn.disabled = !rolled;
   // Shield creation constraints
   makeShieldBtn.disabled =
     state.players.me.energy < 3 || state.players.me.shields >= 2;
@@ -124,6 +124,8 @@ function newGame() {
   const rounds = Number(roundsEl.value) || 8;
   gameState = createInitialState({ rounds }, seed);
   logEl.textContent = "";
+  selectedTendency = null;
+  clearEventFeed();
   updateUI(gameState);
 }
 
@@ -164,31 +166,11 @@ runAiBtn.addEventListener("click", () => {
   write(state);
 });
 
-preDefenseBtn.addEventListener("click", () => {
-  if (!gameState) return;
-  gameState = useCard(gameState, "defense");
-  updateUI(gameState);
-});
-
-preBoostBtn.addEventListener("click", () => {
-  if (!gameState) return;
-  gameState = useCard(gameState, "boost");
-  updateUI(gameState);
-});
-
-playRoundBtn.addEventListener("click", () => {
-  if (!gameState) return;
-  const t = roundTendencyEl.value;
-  gameState = runRound(gameState, t);
-  updateUI(gameState);
-  write(["round:end", { index: gameState.round.index - 1 }]);
-});
-
 newGameBtn.addEventListener("click", () => newGame());
 
 startRoundBtn.addEventListener("click", () => {
   if (!gameState) return;
-  const t = roundTendencyEl.value;
+  const t = selectedTendency || "balance";
   gameState = startRound(gameState, t);
   const ai = createAI(diffEl.value);
   const aiT = ai.chooseTendency(gameState);
@@ -207,24 +189,6 @@ finalizeRoundBtn.addEventListener("click", () => {
   write(["round:finalized", { index: gameState.round.index - 1 }]);
 });
 
-postAttackBtn.addEventListener("click", () => {
-  if (!gameState) return;
-  gameState = useCard(gameState, "attack");
-  updateUI(gameState);
-});
-
-postStealBtn.addEventListener("click", () => {
-  if (!gameState) return;
-  gameState = useCard(gameState, "steal");
-  updateUI(gameState);
-});
-
-postResetBtn.addEventListener("click", () => {
-  if (!gameState) return;
-  gameState = useCard(gameState, "reset");
-  updateUI(gameState);
-});
-
 makeShieldBtn.addEventListener("click", () => {
   if (!gameState) return;
   try {
@@ -232,5 +196,140 @@ makeShieldBtn.addEventListener("click", () => {
     updateUI(gameState);
   } catch (e) {
     write(String(e));
+  }
+});
+
+// Tendency selection
+if (tendencyToggleEl) {
+  tendencyToggleEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-tendency]");
+    if (!btn || !gameState) return;
+    if (gameState.round.roll !== null) return; // locked after roll
+    selectedTendency = btn.getAttribute("data-tendency");
+    renderTendencyToggle(gameState);
+    updateButtonsByPhase(gameState);
+  });
+}
+
+confirmTendencyBtn?.addEventListener("click", () => {
+  if (!gameState) return;
+  if (gameState.round.roll !== null) return;
+  if (!selectedTendency) return;
+  // Move to next step: enable Roll button explicitly
+  updateButtonsByPhase(gameState);
+});
+
+// Event feed helpers
+function pushEventFeed(text) {
+  if (!eventFeedEl) return;
+  const div = document.createElement("div");
+  div.textContent = text;
+  eventFeedEl.appendChild(div);
+  eventFeedEl.scrollTop = eventFeedEl.scrollHeight;
+}
+function clearEventFeed() {
+  if (!eventFeedEl) return;
+  eventFeedEl.textContent = "";
+}
+
+// UI renderers
+function renderTendencyToggle(state) {
+  if (!tendencyToggleEl) return;
+  const buttons = tendencyToggleEl.querySelectorAll("button[data-tendency]");
+  buttons.forEach((b) => {
+    const val = b.getAttribute("data-tendency");
+    b.classList.toggle("selected", val === selectedTendency);
+    b.disabled = state.round.roll !== null; // disabled after roll
+  });
+}
+
+function renderHand(state) {
+  if (!handEl) return;
+  handEl.textContent = "";
+  const phaseRolled = state.round.roll !== null;
+  const cards = state.players.me.cards;
+  meCardsCountEl && (meCardsCountEl.textContent = String(cards.length));
+  aiCardsCountEl &&
+    (aiCardsCountEl.textContent = String(state.players.ai.cards.length || 0));
+  const preAllowed = new Set(["defense", "boost"]);
+  const postAllowed = new Set(["attack", "steal", "reset"]);
+  for (const c of cards) {
+    const btn = document.createElement("button");
+    btn.className = `card-btn ${c.type}`;
+    btn.textContent = c.type;
+    const canUse = canUseCard(state, c.type);
+    const allowedByPhase = phaseRolled
+      ? postAllowed.has(c.type)
+      : preAllowed.has(c.type);
+    btn.disabled = !(canUse && allowedByPhase);
+    btn.title = tooltipForCard(c.type, canUse, allowedByPhase, state);
+    btn.addEventListener("click", () => {
+      if (!gameState) return;
+      gameState = useCard(gameState, c.type);
+      updateUI(gameState);
+    });
+    handEl.appendChild(btn);
+  }
+}
+
+function tooltipForCard(type, canUse, allowedByPhase, state) {
+  const cost =
+    { attack: 2, defense: 1, boost: 4, steal: 2, reset: 4 }[type] || 0;
+  const parts = [`cost ${cost}`];
+  if (!allowedByPhase)
+    parts.push(state.round.roll === null ? "사후 전용" : "사전 전용");
+  if (!canUse) {
+    if (state.round.usedCards.length >= 2) parts.push("2장제한");
+    if (state.round.usedCards.some((c) => c.type === type))
+      parts.push("중복종류");
+  }
+  if (state.players.me.energy < cost) parts.push("E부족");
+  return parts.join(" / ");
+}
+
+function renderReservations(state) {
+  if (meResTray) meResTray.textContent = "";
+  if (aiResTray) aiResTray.textContent = "";
+  const makeIcon = (txt) => {
+    const s = document.createElement("span");
+    s.textContent = txt;
+    s.style.border = "1px solid #e3e7ef";
+    s.style.borderRadius = "6px";
+    s.style.padding = "2px 6px";
+    return s;
+  };
+  if (gameState?.scheduled.luckNext) meResTray?.appendChild(makeIcon("🍀"));
+  if (gameState?.scheduled.bonusTurnNext)
+    meResTray?.appendChild(makeIcon("🌙"));
+  if ((gameState?.scheduled.curseNext || 0) > 0)
+    meResTray?.appendChild(makeIcon(`🎲x${gameState.scheduled.curseNext}`));
+}
+
+function setPhaseBadge(state) {
+  if (!phaseBadgeEl) return;
+  const phase = state.round.roll === null ? "PreRound" : "PostCard";
+  phaseBadgeEl.textContent = phase;
+  // Roll badge
+  if (state.round.roll === 6 && state.round.tendency === "attack")
+    rollBadgeEl.textContent = "⚡";
+  else if (state.round.roll === 2 && state.round.tendency === "defense")
+    rollBadgeEl.textContent = "🛡️";
+  else rollBadgeEl.textContent = "";
+}
+
+function updateButtonsByPhase(state) {
+  const rolled = state.round.roll !== null;
+  startRoundBtn.disabled = rolled || !selectedTendency;
+  finalizeRoundBtn.disabled = !rolled;
+  confirmTendencyBtn &&
+    (confirmTendencyBtn.disabled = rolled || !selectedTendency);
+}
+
+// Event bus for phase updates
+on("phase:*", (p) => {
+  if (p?.name === "round:start") {
+    pushEventFeed(`🎲 Roll: ${gameState?.round.roll ?? "-"}`);
+  } else if (p?.name === "round:end") {
+    pushEventFeed(`✅ Round ${p.index} end`);
   }
 });
