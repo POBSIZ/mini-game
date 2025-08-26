@@ -1,0 +1,134 @@
+:root {
+  --ui-bg: rgba(20, 22, 28, 0.6);
+  --ui-fg: #e8f0ff;
+  --accent: #6cf;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: #0c0f14;
+  overflow: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    Noto Sans KR, "Apple SD Gothic Neo", Arial, "Helvetica Neue", Helvetica,
+    sans-serif;
+  color: var(--ui-fg);
+}
+
+canvas {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+  background: radial-gradient(1200px 800px at 50% 40%, #18202b, #0c0f14 60%);
+}
+
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pill {
+  background: var(--ui-bg);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.bar {
+  width: 240px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bar > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3aff87, #1dcf5c);
+}
+
+.score {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.help {
+  opacity: 0.9;
+  line-height: 1.35;
+}
+
+.help kbd {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.centerMessage {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.title {
+  font-size: clamp(24px, 5vw, 42px);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  opacity: 0.9;
+}
+
+.btnRow {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn {
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ui-fg);
+  font-weight: 600;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.corner {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  opacity: 0.6;
+  font-size: 12px;
+}
