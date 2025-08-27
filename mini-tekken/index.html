@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>미니 대전 격투 게임 (Safe Mode v3)</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --fg: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #22d3ee;
+        --p1: #60a5fa;
+        --p2: #f472b6;
+        --hp: #10b981;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(
+          1200px 600px at 50% -100px,
+          #0d1b2a,
+          #0b1020 50%,
+          #070b13
+        );
+        color: var(--fg);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          "Noto Sans KR", Arial, "Apple SD Gothic Neo", "맑은 고딕", sans-serif;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 100vh;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 10px 16px;
+        border-bottom: 1px solid #1f2937;
+        background: rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(6px);
+      }
+      header .pill {
+        font-size: 12px;
+        padding: 4px 8px;
+        border: 1px solid #334155;
+        border-radius: 999px;
+        color: #cbd5e1;
+        white-space: nowrap;
+      }
+      #wrap {
+        place-self: center;
+        width: min(100vw, 1200px);
+        aspect-ratio: 16/9;
+        position: relative;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        background: #0a1226;
+        display: block;
+      }
+      #info {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        background: #0008;
+        color: #e5e7eb;
+        padding: 6px 10px;
+        border-radius: 12px;
+        border: 1px solid #ffffff22;
+        font-size: 12px;
+      }
+      footer {
+        font-size: 12px;
+        opacity: 0.8;
+        padding: 10px 14px;
+        text-align: center;
+      }
+
+      /* 메뉴 UI */
+      #controls {
+        position: absolute;
+        left: 10px;
+        top: 48px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        max-width: min(90vw, 560px);
+        background: #0008;
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid #334155;
+      }
+      #controls.hidden {
+        display: none;
+      }
+      #controls button {
+        background: #0b1224;
+        color: #cbd5e1;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 6px 10px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      #controls button.active {
+        border-color: #22d3ee;
+        color: #e5faff;
+        box-shadow: 0 0 0 1px #22d3ee55 inset;
+      }
+      #menuBtn {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        background: #0b1224;
+        color: #cbd5e1;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 6px 10px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #menuBtn.active {
+        border-color: #22d3ee;
+        color: #e5faff;
+      }
+
+      /* 오류 오버레이 */
+      #err {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: #000b;
+        color: #fee2e2;
+        text-align: center;
+        padding: 20px;
+      }
+      #err.show {
+        display: flex;
+      }
+      #err pre {
+        max-width: 90%;
+        max-height: 70%;
+        overflow: auto;
+        background: #111827;
+        color: #fca5a5;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #ef44444d;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="pill">P1: WASD / F=펀치 / G=킥</span>
+      <span class="pill">P2: 방향키 / /=펀치 / .=킥</span>
+      <span class="pill">뒤 또는 ↓+뒤 = 가드 · →→/←← = 대시</span>
+      <span class="pill"
+        >R=리셋 · B=박스 · 2=2P/CPU · 3=난이도 · 4=칩 · 5=히트스톱</span
+      >
+    </header>
+
+    <div id="wrap">
+      <button id="menuBtn" title="메뉴">☰</button>
+      <div id="controls">
+        <button data-diff="0">Easy</button>
+        <button data-diff="1">Normal</button>
+        <button data-diff="2">Hard</button>
+        <button id="cpuToggle">CPU: On</button>
+        <button id="chipToggle">Chip: Off</button>
+        <button data-hs="0">HS-L</button>
+        <button data-hs="1">HS-N</button>
+        <button data-hs="2">HS-H</button>
+        <button id="safeToggle">Safe: On</button>
+      </div>
+      <canvas id="game" width="960" height="540"></canvas>
+      <div id="info">CPU (Hard)</div>
+      <div id="err">
+        <div>
+          <h3>스크립트 오류가 발생했어요</h3>
+          <pre id="errMsg"></pre>
+          <p>Safe 모드를 켜두었고, 가능한 부분만 실행 중입니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer>Single-file · Safe Mode v3 · © 브라우저에서 바로 실행</footer>
+
+    <script>
+      (() => {
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const W = canvas.width,
+          H = canvas.height;
+        const GROUND_Y = H - 120;
+
+        // 오류 오버레이 헬퍼
+        const errEl = document.getElementById("err");
+        const errMsg = document.getElementById("errMsg");
+        let SAFE_MODE = true;
+        function showError(e) {
+          errEl.classList.add("show");
+          errMsg.textContent = e && e.stack ? e.stack : String(e);
+        }
+
+        const STATE = {
+          IDLE: "idle",
+          WALK: "walk",
+          JUMP: "jump",
+          CROUCH: "crouch",
+          ATTACK: "attack",
+          HIT: "hit",
+          BLOCK: "block",
+          KO: "ko",
+        };
+
+        const keyState = Object.create(null);
+        const justPressed = Object.create(null);
+        const MAP = {
+          p1_left: "KeyA",
+          p1_right: "KeyD",
+          p1_up: "KeyW",
+          p1_down: "KeyS",
+          p1_punch: "KeyF",
+          p1_kick: "KeyG",
+          p2_left: "ArrowLeft",
+          p2_right: "ArrowRight",
+          p2_up: "ArrowUp",
+          p2_down: "ArrowDown",
+          p2_punch: "Slash",
+          p2_kick: "Period",
+          reset: "KeyR",
+          boxes: "KeyB",
+          toggle2p: "Digit2",
+          toggleAI: "Digit3",
+          toggleChip: "Digit4",
+          cycleHS: "Digit5",
+        };
+        const pressed = (a) => !!keyState[MAP[a]];
+        const pressedOnce = (a) => !!justPressed[MAP[a]];
+
+        // 유틸
+        const clamp = (v, min, max) => (v < min ? min : v > max ? max : v);
+        const cssVar = (name, fallback) => {
+          const v = getComputedStyle(document.documentElement)
+            .getPropertyValue(name)
+            .trim();
+          return v || fallback;
+        };
+
+        const CFG = {
+          gravity: 0.9,
+          speed: 4.2,
+          jump: -14.5,
+          maxVX: 7.2,
+          friction: 0.82,
+        };
+
+        // 오디오
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        function ensureAudio() {
+          try {
+            if (!audioCtx) {
+              audioCtx = new AudioContext();
+            } else if (audioCtx.state === "suspended") {
+              audioCtx.resume();
+            }
+          } catch (e) {
+            /* ignore */
+          }
+        }
+        function beep(
+          type = "sine",
+          freq = 440,
+          dur = 0.1,
+          vol = 0.2,
+          endFreq = null
+        ) {
+          if (!audioCtx) return;
+          const t = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(Math.max(1, freq), t);
+          if (endFreq !== null) {
+            try {
+              osc.frequency.exponentialRampToValueAtTime(
+                Math.max(1, endFreq),
+                t + dur
+              );
+            } catch {}
+          }
+          gain.gain.setValueAtTime(vol, t);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + dur);
+        }
+        const sfxPunch = () => {
+          if (SAFE_MODE) return;
+          beep("sawtooth", 300, 0.07, 0.25, 600);
+        };
+        const sfxKick = () => {
+          if (SAFE_MODE) return;
+          beep("square", 180, 0.1, 0.28, 360);
+        };
+        const sfxHit = () => {
+          if (SAFE_MODE) return;
+          beep("triangle", 110, 0.14, 0.35, 70);
+        };
+        const sfxBlock = () => {
+          if (SAFE_MODE) return;
+          beep("sine", 700, 0.05, 0.25);
+          beep("sine", 350, 0.08, 0.18);
+        };
+        const sfxParry = () => {
+          if (SAFE_MODE) return;
+          beep("square", 900, 0.04, 0.35);
+          beep("square", 450, 0.06, 0.25);
+        };
+
+        // UI 토글 상태
+        const info = document.getElementById("info");
+        let showBoxes = false;
+        let cpuForP2 = true;
+        let guardNoChip = true; // 칩 없음
+        let hitstopScaleIdx = 1; // 0=Low, 1=Normal, 2=High
+        const HSCALE = [0.75, 1.0, 1.35];
+        const COUNTER = { dmgMul: 1.2, stunBonus: 6, flashTime: 0.5 };
+        const SHAKE = { hitAmp: 2.0, blockAmp: 1.0, time: 0.09 };
+
+        let difficulty = 2; // 0..2
+        const DIFF = [
+          {
+            think: 4,
+            atkMid: 0.01,
+            atkClose: 0.02,
+            defend: 0.35,
+            defendLow: 0.5,
+            preemptLow: 0.05,
+            parryLow: 0.15,
+            spaceNear: 60,
+            spaceFar: 150,
+          },
+          {
+            think: 2,
+            atkMid: 0.03,
+            atkClose: 0.06,
+            defend: 0.65,
+            defendLow: 0.7,
+            preemptLow: 0.12,
+            parryLow: 0.35,
+            spaceNear: 70,
+            spaceFar: 140,
+          },
+          {
+            think: 1,
+            atkMid: 0.06,
+            atkClose: 0.12,
+            defend: 0.9,
+            defendLow: 0.95,
+            preemptLow: 0.22,
+            parryLow: 0.6,
+            spaceNear: 80,
+            spaceFar: 130,
+          },
+        ];
+        const diffLabel = () => ["Easy", "Normal", "Hard"][difficulty];
+
+        function uiInfo() {
+          const chip = guardNoChip ? "NoChip" : "ChipOn";
+          const hs = ["HS-L", "HS-N", "HS-H"][hitstopScaleIdx];
+          if (info)
+            info.textContent =
+              (cpuForP2 ? "CPU " : "2P ") +
+              "(" +
+              diffLabel() +
+              ") · " +
+              chip +
+              " · " +
+              hs +
+              (SAFE_MODE ? " · Safe" : "");
+        }
+
+        // 메뉴 버튼
+        const controls = document.getElementById("controls");
+        const diffButtons = Array.from(
+          controls.querySelectorAll("[data-diff]")
+        );
+        const hsButtons = Array.from(controls.querySelectorAll("[data-hs]"));
+        const cpuBtn = document.getElementById("cpuToggle");
+        const chipBtn = document.getElementById("chipToggle");
+        const menuBtn = document.getElementById("menuBtn");
+        const safeBtn = document.getElementById("safeToggle");
+        let controlsOpen = true;
+        function refreshControls() {
+          diffButtons.forEach((b) =>
+            b.classList.toggle("active", Number(b.dataset.diff) === difficulty)
+          );
+          hsButtons.forEach((b) =>
+            b.classList.toggle(
+              "active",
+              Number(b.dataset.hs) === hitstopScaleIdx
+            )
+          );
+          cpuBtn.textContent = cpuForP2 ? "CPU: On" : "CPU: Off";
+          chipBtn.textContent = guardNoChip ? "Chip: Off" : "Chip: On";
+          safeBtn.textContent = SAFE_MODE ? "Safe: On" : "Safe: Off";
+          menuBtn.classList.toggle("active", controlsOpen);
+        }
+        function setDifficulty(d) {
+          difficulty = d;
+          uiInfo();
+          refreshControls();
+        }
+        function setCpu(on) {
+          cpuForP2 = on;
+          P2.isCPU = on;
+          uiInfo();
+          refreshControls();
+        }
+        function setHitstop(i) {
+          hitstopScaleIdx = i;
+          uiInfo();
+          refreshControls();
+        }
+        function toggleChip() {
+          guardNoChip = !guardNoChip;
+          uiInfo();
+          refreshControls();
+        }
+        function toggleMenu() {
+          controlsOpen = !controlsOpen;
+          controls.classList.toggle("hidden", !controlsOpen);
+          refreshControls();
+        }
+        function toggleSafe() {
+          SAFE_MODE = !SAFE_MODE;
+          uiInfo();
+          refreshControls();
+        }
+        diffButtons.forEach((b) =>
+          b.addEventListener("click", () =>
+            setDifficulty(Number(b.dataset.diff))
+          )
+        );
+        hsButtons.forEach((b) =>
+          b.addEventListener("click", () => setHitstop(Number(b.dataset.hs)))
+        );
+        cpuBtn.addEventListener("click", () => setCpu(!cpuForP2));
+        chipBtn.addEventListener("click", toggleChip);
+        menuBtn.addEventListener("click", toggleMenu);
+        safeBtn.addEventListener("click", toggleSafe);
+
+        // 파티클
+        const particles = [];
+        function spawnBlockParticles(x, y) {
+          const N = SAFE_MODE ? 8 : 14;
+          for (let i = 0; i < N; i++) {
+            const a = Math.random() * Math.PI * 2,
+              s = 60 + Math.random() * 120;
+            particles.push({
+              x,
+              y,
+              vx: Math.cos(a) * s,
+              vy: Math.sin(a) * s,
+              life: 0.25 + Math.random() * 0.25,
+              size: 2 + Math.random() * 3,
+              alpha: 1,
+            });
+          }
+        }
+        function updateParticles(dt) {
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.life -= dt;
+            if (p.life <= 0) {
+              particles.splice(i, 1);
+              continue;
+            }
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vx *= 0.92;
+            p.vy *= 0.92;
+            p.alpha = p.life * 2;
+          }
+        }
+        function drawParticles() {
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          for (const p of particles) {
+            ctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = "#e5e7eb";
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = "source-over";
+          ctx.restore();
+        }
+
+        // 연출
+        let hitstop = 0;
+        const addHitstop = (s) => {
+          hitstop = Math.max(hitstop, s * HSCALE[hitstopScaleIdx]);
+        };
+        let shakeT = 0,
+          shakeAmp = 0;
+        let counterFlash = 0,
+          parryFlash = 0;
+
+        const ATTACKS = {
+          jab: {
+            name: "Jab",
+            level: "high",
+            startup: 6,
+            active: 6,
+            recovery: 10,
+            range: 62,
+            height: 26,
+            offsetY: 10,
+            damage: 8,
+            chip: 0,
+            hitstun: 12,
+            blockstun: 8,
+            hitstop: 0.04,
+            blockstop: 0.02,
+          },
+          kick: {
+            name: "Low Kick",
+            level: "low",
+            startup: 10,
+            active: 8,
+            recovery: 16,
+            range: 74,
+            height: 18,
+            offsetY: 0,
+            damage: 12,
+            chip: 0,
+            hitstun: 14,
+            blockstun: 10,
+            hitstop: 0.06,
+            blockstop: 0.03,
+          },
+        };
+
+        class Fighter {
+          constructor(x, color, id, isCPU = false) {
+            this.id = id;
+            this.color = color;
+            this.w = 48;
+            this.h = 96;
+            this.x = x;
+            this.y = GROUND_Y;
+            this.vx = 0;
+            this.vy = 0;
+            this.facing = 1;
+            this.onGround = true;
+            this.state = STATE.IDLE;
+            this.isCrouching = false;
+            this.attack = null;
+            this.attackHit = false;
+            this.hpMax = 100;
+            this.hp = this.hpMax;
+            this.stun = 0;
+            this.blocking = false;
+            this.ko = false;
+            this.parryFrames = 0;
+            this.justWhiff = 0;
+            this.blockFlash = 0;
+            this.dashT = 0;
+            this.lastTapL = -1;
+            this.lastTapR = -1;
+            this.crouchAnim = 0;
+            this.isCPU = isCPU;
+            this.ai = {
+              holdL: false,
+              holdR: false,
+              holdU: false,
+              holdD: false,
+              punch: false,
+              kick: false,
+              thinkCooldown: 0,
+            };
+          }
+          get hurtbox() {
+            const baseH = this.h;
+            const h = this.isCrouching ? Math.round(baseH * 0.82) : baseH;
+            return { x: this.x - this.w / 2, y: this.y - h, w: this.w, h: h };
+          }
+          activeHitbox() {
+            if (!this.attack) return null;
+            const A = this.attack.type,
+              f = this.attack.frame;
+            if (f >= A.startup && f < A.startup + A.active) {
+              const hb = this.hurtbox,
+                dir = this.facing;
+              const y =
+                A.level === "low"
+                  ? hb.y + hb.h - A.height - 4
+                  : hb.y + A.offsetY;
+              return {
+                x: dir === 1 ? hb.x + hb.w : hb.x - A.range,
+                y,
+                w: A.range,
+                h: A.height,
+                level: A.level,
+              };
+            }
+            return null;
+          }
+          startAttack(name) {
+            if (this.ko || this.stun > 0) return;
+            if (this.attack) {
+              const a = this.attack.type,
+                f = this.attack.frame;
+              if (f < a.startup + a.active + a.recovery - 2) return;
+            }
+            if (this.state === STATE.JUMP) return;
+            const type = ATTACKS[name];
+            this.attack = { type, frame: 0 };
+            this.attackHit = false;
+            if (name === "jab") sfxPunch();
+            else sfxKick();
+            this.state = STATE.ATTACK;
+          }
+          takeHit(from, blocked, counter) {
+            const A = from.attack.type;
+            if (blocked) sfxBlock();
+            else sfxHit();
+            const base = blocked ? (guardNoChip ? 0 : A.chip) : A.damage;
+            const dmg =
+              !blocked && counter ? Math.round(base * COUNTER.dmgMul) : base;
+            this.hp = clamp(this.hp - dmg, 0, this.hpMax);
+            if (this.hp <= 0) {
+              this.ko = true;
+              this.state = STATE.KO;
+              return;
+            }
+            this.stun =
+              (blocked ? A.blockstun : A.hitstun) +
+              (!blocked && counter ? COUNTER.stunBonus : 0);
+            this.state = blocked ? STATE.BLOCK : STATE.HIT;
+            addHitstop(blocked ? A.blockstop : A.hitstop);
+            shakeAmp = Math.max(
+              shakeAmp,
+              blocked ? SHAKE.blockAmp : SHAKE.hitAmp
+            );
+            shakeT = SHAKE.time;
+            if (!blocked && counter) counterFlash = COUNTER.flashTime;
+            if (blocked) {
+              this.blockFlash = 0.35;
+              const hb = this.hurtbox;
+              const px = from.facing === 1 ? hb.x : hb.x + hb.w;
+              const py = hb.y + hb.h * 0.6;
+              spawnBlockParticles(px, py);
+            }
+          }
+          updateInput(op) {
+            this.facing = op.x >= this.x ? 1 : -1;
+            let L = false,
+              R = false,
+              U = false,
+              D = false,
+              P = false,
+              K = false;
+            if (this.isCPU) {
+              L = this.ai.holdL;
+              R = this.ai.holdR;
+              U = this.ai.holdU;
+              D = this.ai.holdD;
+              P = this.ai.punch;
+              K = this.ai.kick;
+              this.ai.punch = false;
+              this.ai.kick = false;
+            } else {
+              if (this.id === "P1") {
+                L = pressed("p1_left");
+                R = pressed("p1_right");
+                U = pressedOnce("p1_up");
+                D = pressed("p1_down");
+                P = pressedOnce("p1_punch");
+                K = pressedOnce("p1_kick");
+              } else {
+                L = pressed("p2_left");
+                R = pressed("p2_right");
+                U = pressedOnce("p2_up");
+                D = pressed("p2_down");
+                P = pressedOnce("p2_punch");
+                K = pressedOnce("p2_kick");
+              }
+            }
+            if (!this.ko && this.stun <= 0) {
+              if (L && !R) this.vx -= CFG.speed;
+              if (R && !L) this.vx += CFG.speed;
+              if (!(L ^ R)) this.vx *= this.dashT > 0 ? 0.98 : CFG.friction;
+              if (this.onGround && U) {
+                this.vy = CFG.jump;
+                this.onGround = false;
+                this.state = STATE.JUMP;
+              }
+              this.isCrouching = D && this.onGround;
+              if (this.isCrouching) this.state = STATE.CROUCH;
+              const holdingBack = this.facing === 1 ? L : R;
+              this.blocking = holdingBack && this.onGround && !this.attack;
+              if (P) this.startAttack("jab");
+              if (K) this.startAttack("kick");
+              if (
+                this.onGround &&
+                !L &&
+                !R &&
+                !this.isCrouching &&
+                !this.attack
+              )
+                this.state = STATE.IDLE;
+            }
+          }
+          thinkAI(op) {
+            /* 아래에서 정의 */
+          }
+          step(op) {
+            if (this.blockFlash > 0) this.blockFlash -= 0.016;
+            if (this.ko) return;
+            if (this.stun > 0) this.stun--;
+            if (this.parryFrames > 0) this.parryFrames--;
+            if (this.justWhiff > 0) this.justWhiff--;
+            this.updateInput(op);
+            this.thinkAI(op);
+            const crouchTarget = this.isCrouching ? 1 : 0;
+            this.crouchAnim += (crouchTarget - this.crouchAnim) * 0.3;
+            if (this.dashT > 0) this.dashT--;
+            if (this.attack) {
+              this.attack.frame++;
+              const A = this.attack.type;
+              const total = A.startup + A.active + A.recovery;
+              if (this.attack.frame >= total) {
+                this.justWhiff = this.attackHit ? 0 : 12;
+                this.attack = null;
+                this.state = this.onGround ? STATE.IDLE : STATE.JUMP;
+              }
+            }
+            this.vx = clamp(this.vx, -CFG.maxVX, CFG.maxVX);
+            this.vy += CFG.gravity;
+            this.x += this.vx * 0.12;
+            this.y += this.vy * 0.12;
+            if (this.y >= GROUND_Y) {
+              this.y = GROUND_Y;
+              this.vy = 0;
+              this.onGround = true;
+            } else this.onGround = false;
+            this.x = clamp(this.x, 40, W - 40);
+          }
+        }
+
+        function rectsIntersect(a, b) {
+          return (
+            a &&
+            b &&
+            a.x < b.x + b.w &&
+            a.x + a.w > b.x &&
+            a.y < b.y + b.h &&
+            a.y + a.h > b.y
+          );
+        }
+        function rectIntersection(a, b) {
+          if (!rectsIntersect(a, b)) return null;
+          const x = Math.max(a.x, b.x),
+            y = Math.max(a.y, b.y);
+          return {
+            x,
+            y,
+            w: Math.min(a.x + a.w, b.x + b.w) - x,
+            h: Math.min(a.y + a.h, b.y + b.h) - y,
+          };
+        }
+
+        const P1 = new Fighter(280, cssVar("--p1", "#60a5fa"), "P1", false);
+        const P2 = new Fighter(W - 280, cssVar("--p2", "#f472b6"), "P2", true);
+
+        const round = {
+          time: 60,
+          over: false,
+          winner: null,
+          finishedAt: null,
+          lastTick: performance.now(),
+        };
+
+        window.addEventListener(
+          "keydown",
+          (e) => {
+            try {
+              if (
+                ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(
+                  e.code
+                )
+              )
+                e.preventDefault();
+              if (Object.values(MAP).includes(e.code)) e.preventDefault();
+              if (!keyState[e.code]) justPressed[e.code] = true;
+              keyState[e.code] = true;
+              ensureAudio();
+              if (e.code === MAP.boxes) showBoxes = !showBoxes;
+              if (e.code === MAP.toggle2p) {
+                cpuForP2 = !cpuForP2;
+                P2.isCPU = cpuForP2;
+                uiInfo();
+                refreshControls();
+              }
+              if (e.code === MAP.toggleAI) {
+                difficulty = (difficulty + 1) % 3;
+                uiInfo();
+                refreshControls();
+              }
+              if (e.code === MAP.toggleChip) {
+                guardNoChip = !guardNoChip;
+                uiInfo();
+                refreshControls();
+              }
+              if (e.code === MAP.cycleHS) {
+                hitstopScaleIdx = (hitstopScaleIdx + 1) % HSCALE.length;
+                uiInfo();
+                refreshControls();
+              }
+              if (e.code === MAP.reset) resetRound();
+
+              // 더블탭 대시
+              const now = performance.now();
+              function handleDash(f, dir) {
+                if (!f.onGround || f.stun > 0 || f.attack) return;
+                const thr = 250;
+                const boost = CFG.maxVX * 5;
+                if (dir === "L") {
+                  if (f.lastTapL > 0 && now - f.lastTapL < thr) {
+                    f.vx = -boost;
+                    f.dashT = 14;
+                  }
+                  f.lastTapL = now;
+                } else {
+                  if (f.lastTapR > 0 && now - f.lastTapR < thr) {
+                    f.vx = boost;
+                    f.dashT = 14;
+                  }
+                  f.lastTapR = now;
+                }
+              }
+              if (e.code === MAP.p1_left) handleDash(P1, "L");
+              if (e.code === MAP.p1_right) handleDash(P1, "R");
+              if (!cpuForP2) {
+                if (e.code === MAP.p2_left) handleDash(P2, "L");
+                if (e.code === MAP.p2_right) handleDash(P2, "R");
+              }
+            } catch (err) {
+              showError(err);
+            }
+          },
+          { passive: false }
+        );
+        window.addEventListener("keyup", (e) => {
+          keyState[e.code] = false;
+        });
+
+        Fighter.prototype.thinkAI = function (op) {
+          if (!this.isCPU || this.ko) return;
+          const param = DIFF[difficulty];
+          if (this.ai.thinkCooldown > 0) {
+            this.ai.thinkCooldown--;
+            return;
+          }
+          this.ai.thinkCooldown = param.think;
+          this.ai.holdL = this.ai.holdR = this.ai.holdU = this.ai.holdD = false;
+          this.ai.punch = false;
+          this.ai.kick = false;
+          const dist = Math.abs(op.x - this.x);
+          const opOnRight = op.x >= this.x;
+          const back = () => {
+            if (opOnRight) {
+              this.ai.holdR = true;
+            } else {
+              this.ai.holdL = true;
+            }
+          };
+          const opHit =
+            typeof op.activeHitbox === "function" ? op.activeHitbox() : null;
+          if (op.attack && opHit && dist < opHit.w + 50) {
+            let p = param.defend;
+            if (opHit.level === "low") p = Math.max(p, param.defendLow);
+            if (Math.random() < p) {
+              back();
+              if (opHit.level === "low") this.ai.holdD = true;
+            }
+            if (opHit.level === "low" && Math.random() < param.parryLow) {
+              this.parryFrames = 6;
+            }
+            return;
+          }
+          if (dist < 100 && !this.attack && Math.random() < param.preemptLow) {
+            back();
+            this.ai.holdD = true;
+          }
+          if (op.justWhiff > 0 && dist < 130) {
+            if (opOnRight) {
+              this.ai.holdR = true;
+            } else {
+              this.ai.holdL = true;
+            }
+            if (Math.random() < 0.6) this.ai.punch = true;
+          }
+          if (dist < param.spaceNear) {
+            if (opOnRight) {
+              this.ai.holdL = true;
+            } else {
+              this.ai.holdR = true;
+            }
+          } else if (dist > param.spaceFar) {
+            if (opOnRight) {
+              this.ai.holdR = true;
+            } else {
+              this.ai.holdL = true;
+            }
+          } else {
+            if (Math.random() < 0.3) {
+              if (opOnRight) {
+                this.ai.holdR = true;
+              } else {
+                this.ai.holdL = true;
+              }
+            }
+          }
+          const inClose = dist < 90,
+            inMid = dist < 170;
+          if (inMid && Math.random() < param.atkMid) this.ai.punch = true;
+          if (inClose && Math.random() < param.atkClose) this.ai.kick = true;
+          if (
+            inClose &&
+            !op.isCrouching &&
+            Math.random() < param.atkClose * 0.7
+          )
+            this.ai.kick = true;
+        };
+
+        function canBlock(defender, level) {
+          if (defender.isCrouching) {
+            return level !== "high";
+          }
+          return level !== "low";
+        }
+
+        function resetRound() {
+          try {
+            P1.x = 280;
+            P1.y = GROUND_Y;
+            P1.vx = P1.vy = 0;
+            P1.hp = P1.hpMax;
+            P1.ko = false;
+            P1.stun = 0;
+            P1.attack = null;
+            P1.state = STATE.IDLE;
+            P1.isCrouching = false;
+            P2.x = W - 280;
+            P2.y = GROUND_Y;
+            P2.vx = P2.vy = 0;
+            P2.hp = P2.hpMax;
+            P2.ko = false;
+            P2.stun = 0;
+            P2.attack = null;
+            P2.state = STATE.IDLE;
+            P2.isCrouching = false;
+            round.time = 60;
+            round.over = false;
+            round.winner = null;
+            round.finishedAt = null;
+            round.lastTick = performance.now();
+            particles.length = 0;
+            hitstop = 0;
+            shakeT = 0;
+            shakeAmp = 0;
+            counterFlash = 0;
+            parryFlash = 0;
+            uiInfo();
+          } catch (err) {
+            showError(err);
+          }
+        }
+
+        function frame() {
+          try {
+            requestAnimationFrame(frame);
+            const now = performance.now();
+            const dt = (now - round.lastTick) / 1000;
+            round.lastTick = now;
+            if (!round.over) {
+              round.time = Math.max(0, round.time - dt);
+              if (hitstop > 0) hitstop = Math.max(0, hitstop - dt);
+              if (shakeT > 0) shakeT = Math.max(0, shakeT - dt);
+              if (counterFlash > 0)
+                counterFlash = Math.max(0, counterFlash - dt);
+              if (parryFlash > 0) parryFlash = Math.max(0, parryFlash - dt);
+
+              if (hitstop <= 0) {
+                P1.step(P2);
+                P2.step(P1);
+              }
+
+              // 푸시박스
+              const hb1 = P1.hurtbox,
+                hb2 = P2.hurtbox;
+              const isect = rectIntersection(hb1, hb2);
+              if (isect) {
+                const dir = P2.x - P1.x >= 0 ? 1 : -1;
+                const targetGap = 3;
+                const needed = isect.w + targetGap;
+                const maxPerFrame = 4.0;
+                const move = Math.min(maxPerFrame, needed * 0.5);
+                P1.x += -dir * move;
+                P2.x += dir * move;
+                P1.x = clamp(P1.x, 40, W - 40);
+                P2.x = clamp(P2.x, 40, W - 40);
+                if (dir > 0) {
+                  if (P1.vx > 0) P1.vx *= 0.25;
+                  if (P2.vx < 0) P2.vx *= 0.25;
+                } else {
+                  if (P1.vx < 0) P1.vx *= 0.25;
+                  if (P2.vx > 0) P2.vx *= 0.25;
+                }
+              }
+
+              // 히트/블록/패링
+              const h1 = P1.activeHitbox(),
+                h2 = P2.activeHitbox();
+              if (h1 && !P1.attackHit && rectsIntersect(h1, hb2)) {
+                const blocked = P2.blocking && canBlock(P2, h1.level);
+                const c = rectIntersection(h1, hb2);
+                if (blocked && c) {
+                  spawnBlockParticles(c.x + c.w / 2, c.y + c.h / 2);
+                }
+                const counter = !!P2.attack && !blocked;
+                if (h1.level === "low" && P2.parryFrames > 0) {
+                  sfxParry();
+                  addHitstop(0.05);
+                  parryFlash = 0.35;
+                  P1.stun += 18;
+                  P1.vx += P1.facing === 1 ? -2.0 : 2.0;
+                  P1.attackHit = true;
+                } else {
+                  P2.takeHit(P1, blocked, counter);
+                  if (blocked) {
+                    P1.vx += P1.facing === 1 ? -1.2 : 1.2;
+                  }
+                  P1.attackHit = true;
+                }
+              }
+              if (h2 && !P2.attackHit && rectsIntersect(h2, hb1)) {
+                const blocked = P1.blocking && canBlock(P1, h2.level);
+                const c = rectIntersection(h2, hb1);
+                if (blocked && c) {
+                  spawnBlockParticles(c.x + c.w / 2, c.y + c.h / 2);
+                }
+                const counter = !!P1.attack && !blocked;
+                if (h2.level === "low" && P1.parryFrames > 0) {
+                  sfxParry();
+                  addHitstop(0.05);
+                  parryFlash = 0.35;
+                  P2.stun += 18;
+                  P2.vx += P2.facing === 1 ? -2.0 : 2.0;
+                  P2.attackHit = true;
+                } else {
+                  P1.takeHit(P2, blocked, counter);
+                  if (blocked) {
+                    P2.vx += P2.facing === 1 ? -1.2 : 1.2;
+                  }
+                  P2.attackHit = true;
+                }
+              }
+
+              if (P1.hp <= 0 || P2.hp <= 0 || round.time <= 0) {
+                round.over = true;
+                round.finishedAt = performance.now();
+                round.winner =
+                  P1.hp === P2.hp
+                    ? "DRAW"
+                    : P1.hp > P2.hp
+                    ? "P1 WIN"
+                    : "P2 WIN";
+              }
+            }
+
+            updateParticles(dt);
+            draw();
+            for (const k in justPressed) justPressed[k] = false;
+          } catch (err) {
+            showError(err);
+          }
+        }
+
+        function draw() {
+          try {
+            ctx.save();
+            if (shakeT > 0 && shakeAmp > 0) {
+              const t = performance.now() / 16.666;
+              const dx = Math.sin(t * 11.3) * shakeAmp;
+              const dy = Math.cos(t * 9.7) * shakeAmp * 0.5;
+              ctx.translate(dx, dy);
+            }
+            const grd = ctx.createLinearGradient(0, 0, 0, H);
+            grd.addColorStop(0, "#0b1430");
+            grd.addColorStop(0.6, "#0a1330");
+            grd.addColorStop(1, "#061025");
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = "#0f1a33";
+            ctx.fillRect(0, GROUND_Y + 8, W, H - GROUND_Y);
+            ctx.fillStyle = "#1d2a4a";
+            ctx.fillRect(0, GROUND_Y, W, 6);
+            drawF(P1);
+            drawF(P2);
+            drawParticles();
+            drawHUD();
+            if (counterFlash > 0) {
+              ctx.save();
+              ctx.globalAlpha = Math.min(1, counterFlash * 2);
+              ctx.fillStyle = "#fca5a5";
+              ctx.font = "bold 40px ui-sans-serif, system-ui";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "top";
+              ctx.fillText("COUNTER!", W / 2, 60);
+              ctx.restore();
+            }
+            if (parryFlash > 0) {
+              ctx.save();
+              ctx.globalAlpha = Math.min(1, parryFlash * 2);
+              ctx.fillStyle = "#a5f3fc";
+              ctx.font = "bold 36px ui-sans-serif, system-ui";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "top";
+              ctx.fillText("PARRY!", W / 2, 110);
+              ctx.restore();
+            }
+            if (round.over) drawBanner(round.winner || "FINISH");
+            ctx.restore();
+          } catch (err) {
+            showError(err);
+          }
+        }
+
+        function drawF(f) {
+          const hb = f.hurtbox;
+          ctx.globalAlpha = 0.25;
+          ctx.fillStyle = "#000";
+          ctx.beginPath();
+          ctx.ellipse(f.x, GROUND_Y + 6, 40, 10, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = f.color || "#8888ff";
+          const bob = f.onGround
+            ? f.state === STATE.WALK
+              ? Math.sin(performance.now() / 80) * 2
+              : 0
+            : -4;
+          const visH = hb.h * (1 - 0.08 * f.crouchAnim);
+          const visY = hb.y + bob + (hb.h - visH);
+          ctx.fillRect(hb.x, visY, hb.w, visH);
+          ctx.fillStyle = "#e5e7eb";
+          ctx.beginPath();
+          ctx.arc(f.x, hb.y - 12 + bob, 14, 0, Math.PI * 2);
+          ctx.fill();
+          if (f.attack) {
+            const A = f.attack.type,
+              ff = f.attack.frame;
+            const t = Math.min(
+              1,
+              Math.max(0, (ff - A.startup) / Math.max(1, A.active))
+            );
+            const reach = A.range * t;
+            const atkY =
+              A.level === "low" ? hb.y + hb.h - 10 + bob : hb.y - 8 + bob;
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.lineWidth = 6;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            const sx = f.facing === 1 ? hb.x + hb.w - 6 : hb.x + 6;
+            ctx.moveTo(sx, atkY);
+            ctx.lineTo(sx + reach * f.facing, atkY);
+            ctx.stroke();
+          }
+          // 대시 잔상
+          if (f.dashT > 0) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(0.35, f.dashT * 0.03);
+            ctx.fillStyle = f.id === "P1" ? "#60a5fa" : "#f472b6";
+            const hb2 = f.hurtbox;
+            ctx.fillRect(hb2.x, hb2.y + 2, hb2.w, hb2.h - 4);
+            ctx.restore();
+          }
+          // 가드/크라우치 표시
+          if (f.blocking || f.state === STATE.BLOCK || f.blockFlash > 0) {
+            ctx.save();
+            const alpha = f.state === STATE.BLOCK ? 0.9 : 0.6;
+            ctx.globalAlpha = Math.min(1, f.blockFlash > 0 ? 0.8 : alpha);
+            ctx.strokeStyle = "#22d3ee";
+            ctx.lineWidth = 3.5;
+            const hb2 = f.hurtbox;
+            ctx.strokeRect(hb2.x - 2, hb2.y - 2, hb2.w + 4, hb2.h + 4);
+            ctx.fillStyle = "#22d3ee";
+            ctx.font = "bold 12px ui-sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillText("BLOCK", f.x, hb2.y - 16);
+            ctx.restore();
+          } else if (f.isCrouching) {
+            ctx.save();
+            const hb2 = f.hurtbox;
+            ctx.setLineDash([6, 3]);
+            ctx.strokeStyle = f.color || "#f59e0b";
+            ctx.lineWidth = 2.5;
+            ctx.globalAlpha = 0.95;
+            ctx.strokeRect(hb2.x - 2, hb2.y - 2, hb2.w + 4, hb2.h + 4);
+            ctx.setLineDash([]);
+            ctx.fillStyle = f.color || "#f59e0b";
+            ctx.font = "bold 14px ui-sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText("▼", f.x, hb2.y - 20);
+            ctx.restore();
+          }
+          if (showBoxes) {
+            ctx.strokeStyle = "rgba(255,255,255,.35)";
+            ctx.strokeRect(hb.x, hb.y, hb.w, hb.h);
+            const atk = f.activeHitbox();
+            if (atk) {
+              ctx.strokeStyle = "rgba(56,189,248,.8)";
+              ctx.strokeRect(atk.x, atk.y, atk.w, atk.h);
+            }
+          }
+        }
+
+        function drawHUD() {
+          const pad = 20,
+            barW = W / 2 - pad * 2,
+            barH = 18,
+            topY = 18;
+          ctx.fillStyle = "#0b1224";
+          ctx.fillRect(pad, topY, barW, barH);
+          ctx.fillRect(W - pad - barW, topY, barW, barH);
+          const hpColor = cssVar("--hp", "#10b981");
+          const p1r = barW * (P1.hp / P1.hpMax),
+            p2r = barW * (P2.hp / P2.hpMax);
+          ctx.fillStyle = hpColor;
+          ctx.fillRect(pad, topY, p1r, barH);
+          ctx.fillStyle = hpColor;
+          ctx.fillRect(W - pad - p2r, topY, p2r, barH);
+          ctx.strokeStyle = "#334155";
+          ctx.strokeRect(pad, topY, barW, barH);
+          ctx.strokeRect(W - pad - barW, topY, barW, barH);
+          ctx.fillStyle = "#cbd5e1";
+          ctx.font = "bold 12px system-ui";
+          ctx.textBaseline = "top";
+          ctx.fillText("P1" + (P1.isCrouching ? " ↓" : ""), pad, 4);
+          ctx.fillText(
+            "P2" + (P2.isCrouching ? " ↓" : ""),
+            W - pad - 18 - (P2.isCrouching ? 10 : 0),
+            4
+          );
+          const t = Math.ceil(round.time);
+          const timerW = 70,
+            timerH = 36;
+          ctx.fillStyle = "#0b1224";
+          ctx.fillRect(W / 2 - timerW / 2, 10, timerW, timerH);
+          ctx.strokeStyle = "#334155";
+          ctx.strokeRect(W / 2 - timerW / 2, 10, timerW, timerH);
+          ctx.fillStyle = "#e5e7eb";
+          ctx.font = "bold 22px ui-monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(String(t).padStart(2, "0"), W / 2, 10 + timerH / 2 + 1);
+          ctx.textAlign = "left";
+        }
+
+        function drawBanner(text) {
+          ctx.save();
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = "#000000aa";
+          ctx.fillRect(0, 0, W, H);
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = "#e5e7eb";
+          ctx.font = "bold 56px system-ui, -apple-system, Segoe UI, Roboto";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, W / 2, H / 2 - 10);
+          ctx.font = "14px system-ui";
+          ctx.fillStyle = "#cbd5e1";
+          ctx.fillText(
+            "R: 리셋 · 2: 2P/CPU · 3: 난이도 · 4: 칩 · 5: 히트스톱",
+            W / 2,
+            H / 2 + 26
+          );
+          ctx.textAlign = "left";
+          ctx.restore();
+        }
+
+        function init() {
+          uiInfo();
+          refreshControls();
+          resetRound();
+          frame();
+          canvas.addEventListener("pointerdown", () => {
+            if (canvas.focus) canvas.focus();
+            ensureAudio();
+          });
+        }
+        try {
+          init();
+        } catch (err) {
+          showError(err);
+        }
+      })();
+    </script>
+  </body>
+</html>
