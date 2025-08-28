@@ -583,8 +583,8 @@
             this.justWhiff = 0;
             this.blockFlash = 0;
             this.dashT = 0;
-            this.lastTapL = -1;
-            this.lastTapR = -1;
+            this.lastTapL = 0;
+            this.lastTapR = 0;
             this.crouchAnim = 0;
             this.isCPU = isCPU;
             this.ai = {
@@ -839,29 +839,42 @@
 
               // 더블탭 대시
               const now = performance.now();
-              function handleDash(f, dir) {
-                if (!f.onGround || f.stun > 0 || f.attack) return;
-                const thr = 250;
-                const boost = CFG.maxVX * 5;
-                if (dir === "L") {
-                  if (f.lastTapL > 0 && now - f.lastTapL < thr) {
-                    f.vx = -boost;
-                    f.dashT = 14;
-                  }
-                  f.lastTapL = now;
-                } else {
-                  if (f.lastTapR > 0 && now - f.lastTapR < thr) {
-                    f.vx = boost;
-                    f.dashT = 14;
-                  }
-                  f.lastTapR = now;
+              const thr = 250;
+              const boost = CFG.maxVX * 5;
+
+              if (e.code === MAP.p1_left && justPressed[e.code]) {
+                if (!P1.onGround || P1.stun > 0 || P1.attack) return;
+                if (now - P1.lastTapL < thr && P1.lastTapL !== 0) {
+                  P1.vx = -boost;
+                  P1.dashT = 14;
                 }
+                P1.lastTapL = now;
               }
-              if (e.code === MAP.p1_left) handleDash(P1, "L");
-              if (e.code === MAP.p1_right) handleDash(P1, "R");
+              if (e.code === MAP.p1_right && justPressed[e.code]) {
+                if (!P1.onGround || P1.stun > 0 || P1.attack) return;
+                if (now - P1.lastTapR < thr && P1.lastTapR !== 0) {
+                  P1.vx = boost;
+                  P1.dashT = 14;
+                }
+                P1.lastTapR = now;
+              }
               if (!cpuForP2) {
-                if (e.code === MAP.p2_left) handleDash(P2, "L");
-                if (e.code === MAP.p2_right) handleDash(P2, "R");
+                if (e.code === MAP.p2_left && justPressed[e.code]) {
+                  if (!P2.onGround || P2.stun > 0 || P2.attack) return;
+                  if (now - P2.lastTapL < thr && P2.lastTapL !== 0) {
+                    P2.vx = -boost;
+                    P2.dashT = 14;
+                  }
+                  P2.lastTapL = now;
+                }
+                if (e.code === MAP.p2_right && justPressed[e.code]) {
+                  if (!P2.onGround || P2.stun > 0 || P2.attack) return;
+                  if (now - P2.lastTapR < thr && P2.lastTapR !== 0) {
+                    P2.vx = boost;
+                    P2.dashT = 14;
+                  }
+                  P2.lastTapR = now;
+                }
               }
             } catch (err) {
               showError(err);
