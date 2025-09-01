@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>세넷 (Senet) · 보드게임</title>
+    <script src="script.js" defer></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="row">
+          <h1>세넷 (Senet)</h1>
+          <div class="pill">
+            <span class="turn-dot" id="turn-dot"></span
+            ><span id="turn-label"></span>
+          </div>
+        </div>
+        <div class="row">
+          <button id="btn-rules" class="btn ghost">규칙</button>
+          <button id="btn-reset" class="btn ghost">새 게임</button>
+        </div>
+      </header>
+
+      <div class="wrap">
+        <section class="card">
+          <div class="row" style="align-items: center; gap: 12px">
+            <button id="roll" class="btn">막대기 던지기 (R)</button>
+            <div class="sticks" aria-live="polite" aria-atomic="true">
+              <div class="stick" id="s0"><div class="face">●</div></div>
+              <div class="stick" id="s1"><div class="face">●</div></div>
+              <div class="stick" id="s2"><div class="face">●</div></div>
+              <div class="stick" id="s3"><div class="face">●</div></div>
+            </div>
+            <div class="result" id="result">–</div>
+          </div>
+          <div id="status"></div>
+          <div style="font-size: 12px; color: var(--muted); margin-top: 6px">
+            특수칸: <b>15</b>·<b>26</b> 안전 / <b>27</b> 물(15→26 귀환) /
+            <b>30</b> 탈출
+          </div>
+        </section>
+
+        <section class="board card">
+          <div id="board" class="grid" role="grid" aria-label="세넷 보드"></div>
+        </section>
+      </div>
+    </div>
+
+    <dialog id="rules">
+      <div class="modal">
+        <header><h2>세넷 규칙 요약</h2></header>
+        <div class="body">
+          <ol>
+            <li>
+              막대기 4개: 앞면 수(1~4)만큼 이동, 모두 뒷면이면 5칸. 4·5는
+              추가턴(단, 물칸 착지/패스 시 추가턴 없음).
+            </li>
+            <li>
+              같은 편 말 위에는 착지 불가. 상대 말 한 개면 자리 교환, 단
+              <b>안전칸(15,26)</b> 또는 상대가 연속(보호) 중이면 교환 불가.
+            </li>
+            <li>
+              상대 연속 ≥2는 쌍둥이 벽: 그 칸을
+              <b>지나갈 수도, 착지할 수도 없음</b>.
+            </li>
+            <li>27(물): 착지 시 즉시 15(없으면 26)으로 귀환하고 턴 종료.</li>
+            <li>30(탈출): 정확히 도착해야 탈출. 모든 말 탈출 시 승리.</li>
+          </ol>
+        </div>
+        <footer>
+          <button
+            class="btn ghost"
+            onclick="document.getElementById('rules').close()"
+          >
+            닫기
+          </button>
+        </footer>
+      </div>
+    </dialog>
+  </body>
+</html>

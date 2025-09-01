@@ -4,540 +4,242 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>세넷 (Senet) · 보드게임</title>
-    <style>
-      :root {
-        --bg: #0f1221;
-        --panel: #171a2b;
-        --ink: #e8ecff;
-        --muted: #a9b1d6;
-        --accent: #8fd3ff;
-        --accent-2: #ffd28f;
-        --safe: #2ec27e;
-        --water: #7ccaff;
-        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35),
-          inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-        --radius: 16px;
-      }
-      html,
-      body {
-        height: 100%;
-      }
-      body {
-        margin: 0;
-        background: radial-gradient(
-            1000px 600px at 80% -10%,
-            rgba(143, 211, 255, 0.18),
-            transparent 40%
-          ),
-          radial-gradient(
-            1200px 800px at 0% 120%,
-            rgba(255, 210, 143, 0.12),
-            transparent 50%
-          ),
-          var(--bg);
-        color: var(--ink);
-        font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR,
-          Helvetica, Arial;
-      }
-      #app {
-        max-width: 1100px;
-        margin: 24px auto;
-        padding: 16px;
-      }
-      header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-      }
-      h1 {
-        margin: 0;
-        font-size: 22px;
-      }
-      .row {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .btn {
-        appearance: none;
-        border: 0;
-        padding: 10px 12px;
-        border-radius: 12px;
-        background: linear-gradient(180deg, #222848, #171a2b);
-        color: var(--ink);
-        box-shadow: var(--shadow);
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .btn.ghost {
-        background: transparent;
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-      }
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 10px;
-        border-radius: 999px;
-        background: #1b2043;
-        box-shadow: var(--shadow);
-        font-weight: 700;
-      }
-      .turn-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--accent);
-      }
-      .turn-dot.B {
-        background: var(--accent-2);
-      }
 
-      .wrap {
-        display: grid;
-        grid-template-columns: 340px 1fr;
-        gap: 20px;
-      }
-      @media (max-width: 980px) {
-        .wrap {
-          grid-template-columns: 1fr;
-        }
-      }
-      .card {
-        background: var(--panel);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        padding: 14px;
-      }
-
-      /* sticks */
-      .sticks {
-        display: flex;
-        gap: 8px;
-      }
-      .stick {
-        width: 50px;
-        height: 18px;
-        border-radius: 999px;
-        background: #252a4a;
-        box-shadow: var(--shadow);
-        position: relative;
-        overflow: hidden;
-      }
-      .stick .face {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        font-size: 12px;
-        font-weight: 800;
-        color: #09121f;
-        background: linear-gradient(180deg, #a7e5ff, #7ccaff);
-        opacity: 0;
-        transition: 0.25s opacity ease;
-      }
-      .stick.on .face {
-        opacity: 1;
-      }
-      .result {
-        min-width: 46px;
-        font-weight: 800;
-      }
-      #status {
-        min-height: 22px;
-        font-weight: 700;
-        color: var(--muted);
-      }
-
-      /* grid */
-      .board.card {
-        padding: 12px;
-      }
-      .grid {
-        --cell: 74px;
-        display: grid;
-        grid-template-columns: repeat(10, var(--cell));
-        grid-template-rows: repeat(3, var(--cell));
-        gap: 8px;
-        justify-content: center;
-      }
-      @media (max-width: 720px) {
-        .grid {
-          --cell: 60px;
-          gap: 6px;
-        }
-      }
-      @media (max-width: 520px) {
-        .grid {
-          --cell: 54px;
-          gap: 6px;
-        }
-      }
-      .cell {
-        position: relative;
-        width: var(--cell);
-        height: var(--cell);
-        border-radius: 14px;
-        background: linear-gradient(180deg, #1c2141, #151937);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-      }
-      .cell.safe::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(
-          180px 100px at 50% 120%,
-          rgba(46, 194, 126, 0.22),
-          transparent 60%
-        );
-      }
-      .cell.water::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(
-          180px 100px at 50% 120%,
-          rgba(143, 211, 255, 0.25),
-          transparent 60%
-        );
-      }
-      .idx {
-        position: absolute;
-        top: 6px;
-        left: 8px;
-        font-size: 11px;
-        color: var(--muted);
-      }
-      .glyph {
-        position: absolute;
-        right: 8px;
-        top: 6px;
-        font-size: 14px;
-        opacity: 0.9;
-      }
-      .highlight {
-        outline: 3px solid rgba(143, 211, 255, 0.75);
-      }
-      .target-label {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.3px;
-        color: #00111a;
-        background: rgba(143, 211, 255, 0.22);
-        border: 2px dashed rgba(143, 211, 255, 0.7);
-        border-radius: 12px;
-        pointer-events: none;
-      }
-
-      /* pieces */
-      .piece {
-        position: absolute;
-        inset: 8px;
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        font-weight: 900;
-        letter-spacing: 0.3px;
-        user-select: none;
-        cursor: pointer;
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
-      }
-      .piece.W {
-        background: linear-gradient(180deg, #e6f0ff, #cfe0ff);
-        color: #09121f;
-      }
-      .piece.B {
-        background: linear-gradient(180deg, #2b2f4f, #1c203b);
-        color: #e7eaff;
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-      }
-      .piece.dim {
-        opacity: 0.55;
-        filter: saturate(0.5);
-      }
-      .piece.can-move {
-        box-shadow: 0 0 0 3px rgba(143, 211, 255, 0.8),
-          0 0 18px rgba(143, 211, 255, 0.45);
-        transform: translateY(-2px);
-      }
-
-      /* floating animation token */
-      .float-piece {
-        position: fixed;
-        z-index: 9999;
-        width: 58px;
-        height: 58px;
-        border-radius: 14px;
-        display: grid;
-        place-items: center;
-        font-weight: 900;
-      }
-
-      dialog {
-        border: 0;
-        border-radius: 16px;
-        padding: 0;
-        background: var(--panel);
-        color: var(--ink);
-        box-shadow: var(--shadow);
-        max-width: 720px;
-        width: min(92vw, 720px);
-      }
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.55);
-      }
-      .modal {
-        padding: 18px;
-      }
-      .modal header {
-        margin-bottom: 8px;
-      }
-      .modal h2 {
-        margin: 0;
-        font-size: 20px;
-      }
-      .modal .body {
-        color: var(--muted);
-        font-size: 14px;
-      }
-      .modal footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 14px;
-      }
-      /* 클릭 문제 해결: 특수칸 오버레이가 말 클릭을 가로채지 않도록 */
-      .cell.safe::after,
-      .cell.water::after {
-        pointer-events: none;
-        z-index: 0;
-      }
-      .piece {
-        z-index: 1;
-      }
-      .idx,
-      .glyph {
-        z-index: 2;
-        pointer-events: none;
-      }
-      /* === Responsive Enhancements === */
-      /* Fluid board sizing with safe clamps */
-      .grid {
-        --cell: clamp(46px, 8.6vw, 74px);
-        gap: clamp(4px, 1.2vw, 8px);
-      }
-      .cell {
-        border-radius: clamp(10px, 2vw, 14px);
-      }
-      .piece {
-        inset: clamp(6px, 1.2vw, 8px);
-        border-radius: clamp(10px, 2vw, 14px);
-      }
-      .target-label {
-        border-radius: clamp(10px, 2vw, 12px);
-        font-size: clamp(10px, 2.1vw, 11px);
-      }
-      .idx {
-        font-size: clamp(10px, 1.9vw, 11px);
-      }
-      .glyph {
-        font-size: clamp(12px, 2.2vw, 14px);
-      }
-      header {
-        flex-wrap: wrap;
-      }
-      .wrap {
-        grid-template-columns: 1fr 1fr;
-      }
-      @media (max-width: 1020px) {
-        .wrap {
-          grid-template-columns: 1fr;
-        }
-      }
-      /* Compact controls on small screens */
-      @media (max-width: 640px) {
-        #app {
-          padding: 12px;
-        }
-        h1 {
-          font-size: 18px;
-        }
-        .btn {
-          padding: 9px 10px;
-          border-radius: 10px;
-        }
-        .sticks {
-          gap: 6px;
-        }
-        .stick {
-          width: 44px;
-          height: 16px;
-        }
-        .result {
-          min-width: 40px;
-        }
-      }
-      /* Prevent overflow: allow panel to scroll if needed */
-      .board.card {
-        overflow: auto;
-      }
-      /* Make overlays non-blocking and ensure pieces get clicks even on small screens */
-      .cell.safe::after,
-      .cell.water::after {
-        pointer-events: none;
-        z-index: 0;
-      }
-      .piece {
-        z-index: 1;
-      }
-      .idx,
-      .glyph {
-        z-index: 2;
-        pointer-events: none;
-      }
-      /* === Responsive Enhancements === */
-      /* Board should never exceed screen width */
-      .board.card {
-        overflow: auto;
-        max-width: 100%;
-      }
-      .grid {
-        --cell: 72px;
-        gap: 8px;
-        justify-content: center;
-        max-width: 100%;
-      }
-      .grid {
-        width: 100%;
-      }
-      @media (max-width: 1020px) {
-        .wrap {
-          grid-template-columns: 1fr;
-        }
-      }
-      .wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-      .card {
-        width: 100%;
-        max-width: 720px;
-      }
-      /* Compact controls on small screens */
-      @media (max-width: 640px) {
-        #app {
-          padding: 12px;
-        }
-        h1 {
-          font-size: 18px;
-        }
-        .btn {
-          padding: 9px 10px;
-          border-radius: 10px;
-        }
-        .sticks {
-          gap: 6px;
-        }
-        .stick {
-          width: 44px;
-          height: 16px;
-        }
-        .result {
-          min-width: 40px;
-        }
-      }
-      .cell.safe::after,
-      .cell.water::after {
-        pointer-events: none;
-        z-index: 0;
-      }
-      .piece {
-        z-index: 1;
-      }
-      .idx,
-      .glyph {
-        z-index: 2;
-        pointer-events: none;
-      }
-      /* === Layout preference: vertical stack & board width cap === */
-      .wrap {
-        grid-template-columns: 1fr !important;
-      }
-      .board.card {
-        overflow: visible;
-      }
-      .grid {
-        width: 100%;
-        max-width: min(100vw - 32px, 860px); /* never exceed viewport width */
-        margin: 0 auto; /* centered board */
-        grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
-        gap: clamp(6px, 0.9vw, 10px);
-      }
-      /* square cells that scale with container width */
-      .cell {
-        width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 1 / 1;
-      }
-      /* pieces & labels scale softly with cell size */
-      .piece {
-        inset: clamp(4px, 0.8vw, 8px);
-        border-radius: clamp(8px, 1.6vw, 14px);
-      }
-      .idx {
-        font-size: clamp(10px, 1.6vw, 12px);
-      }
-      .glyph {
-        font-size: clamp(12px, 1.8vw, 14px);
-      }
-    </style>
+    <script src="multiplayer-ui.js" defer></script>
+    <script src="multiplayer-game.js" defer></script>
+    <script>
+      // 디버깅을 위한 전역 함수
+      window.debugGameState = function () {
+        const game = window.multiplayerGame;
+        const ui = window.multiplayerUI;
+        console.log("🎮 게임 상태 디버그:", {
+          game: game
+            ? {
+                turn: game.turn,
+                roll: game.roll,
+                pieces: game.pieces,
+                isMultiplayer: game.isMultiplayer,
+                playerId: game.playerId,
+              }
+            : null,
+          ui: ui
+            ? {
+                playerId: ui.playerId,
+                playerName: ui.playerName,
+                currentRoom: ui.currentRoom,
+              }
+            : null,
+        });
+      };
+    </script>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="app">
-      <header>
-        <div class="row">
-          <h1>세넷 (Senet)</h1>
-          <div class="pill">
-            <span class="turn-dot" id="turn-dot"></span
-            ><span id="turn-label"></span>
-          </div>
-        </div>
-        <div class="row">
-          <button id="btn-rules" class="btn ghost">규칙</button>
-          <button id="btn-reset" class="btn ghost">새 게임</button>
-        </div>
-      </header>
+      <!-- 멀티플레이어 로비 화면 -->
+      <div id="lobby" class="lobby-screen">
+        <div class="lobby-content">
+          <h1>세넷 (Senet) 멀티플레이어</h1>
 
-      <div class="wrap">
-        <section class="card">
-          <div class="row" style="align-items: center; gap: 12px">
-            <button id="roll" class="btn">막대기 던지기 (R)</button>
-            <div class="sticks" aria-live="polite" aria-atomic="true">
-              <div class="stick" id="s0"><div class="face">●</div></div>
-              <div class="stick" id="s1"><div class="face">●</div></div>
-              <div class="stick" id="s2"><div class="face">●</div></div>
-              <div class="stick" id="s3"><div class="face">●</div></div>
+          <!-- 플레이어 이름 설정 -->
+          <div class="player-setup-panel card">
+            <h3>플레이어 설정</h3>
+            <div class="player-form">
+              <div class="form-group">
+                <label for="player-name">플레이어 이름:</label>
+                <input
+                  type="text"
+                  id="player-name"
+                  value="플레이어1"
+                  placeholder="플레이어 이름"
+                />
+              </div>
+              <button id="btn-connect" class="btn">
+                🎮 멀티플레이어 게임 시작
+              </button>
             </div>
-            <div class="result" id="result">–</div>
+            <div class="server-info">
+              <span class="server-status">🟢 서버 연결됨</span>
+              <span class="server-url">localhost:8080</span>
+            </div>
           </div>
-          <div id="status"></div>
-          <div style="font-size: 12px; color: var(--muted); margin-top: 6px">
-            특수칸: <b>15</b>·<b>26</b> 안전 / <b>27</b> 물(15→26 귀환) /
-            <b>30</b> 탈출
-          </div>
-        </section>
 
-        <section class="board card">
-          <div id="board" class="grid" role="grid" aria-label="세넷 보드"></div>
-        </section>
+          <!-- 방 목록 및 참가 -->
+          <div class="rooms-panel card" id="rooms-panel" style="display: none">
+            <h3>게임방</h3>
+
+            <!-- 방 필터링 옵션 -->
+            <div class="room-filters">
+              <div class="filter-group">
+                <label for="filter-status">상태:</label>
+                <select id="filter-status" class="filter-select">
+                  <option value="all">모든 방</option>
+                  <option value="waiting">대기중</option>
+                  <option value="playing">게임중</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="filter-password">비밀번호:</label>
+                <select id="filter-password" class="filter-select">
+                  <option value="">모두</option>
+                  <option value="false">공개</option>
+                  <option value="true">비밀번호</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="filter-players">플레이어:</label>
+                <select id="filter-players" class="filter-select">
+                  <option value="">모두</option>
+                  <option value="2">2인용</option>
+                </select>
+              </div>
+              <button id="btn-apply-filters" class="btn ghost small">
+                필터 적용
+              </button>
+            </div>
+
+            <div class="rooms-list" id="rooms-list">
+              <!-- 방 목록이 여기에 동적으로 추가됨 -->
+            </div>
+            <div class="room-actions">
+              <button id="btn-create-room" class="btn">새 방 만들기</button>
+              <button id="btn-refresh-rooms" class="btn ghost">새로고침</button>
+            </div>
+          </div>
+
+          <!-- 로컬 게임 시작 -->
+          <div class="local-game-panel card">
+            <h3>로컬 게임</h3>
+            <p>혼자서 게임을 즐기거나 멀티플레이어 없이 플레이하세요.</p>
+            <a
+              href="../senet-single/index.html"
+              id="btn-start-local"
+              class="btn"
+              >로컬 게임 시작</a
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- 대기 화면 (방 참가/생성 후) -->
+      <div id="waiting-screen" class="waiting-screen" style="display: none">
+        <div class="waiting-content">
+          <header class="waiting-header">
+            <h2>🎮 게임 대기실</h2>
+            <div id="room-info-display">
+              <!-- 방 정보가 JavaScript로 동적으로 표시됨 -->
+            </div>
+          </header>
+
+          <div class="waiting-main">
+            <!-- 플레이어 목록 -->
+            <div class="players-panel card">
+              <h3>👥 플레이어 목록</h3>
+              <div class="players-list" id="players-list">
+                <!-- 플레이어 목록이 JavaScript로 동적으로 표시됨 -->
+              </div>
+            </div>
+
+            <!-- 게임 준비 상태 -->
+            <div class="game-ready-panel card">
+              <h3>🎯 게임 준비</h3>
+              <div class="ready-status">
+                <p>모든 플레이어가 준비되면 게임이 시작됩니다.</p>
+                <!-- 준비 버튼 -->
+                <div class="ready-actions">
+                  <button id="btn-ready" class="ready-btn" disabled>
+                    준비
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 액션 버튼들 -->
+            <div class="waiting-actions">
+              <button id="btn-start-game" class="btn" disabled>
+                게임 시작
+              </button>
+              <button id="btn-leave-room" class="btn ghost">방 나가기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 기존 게임 화면 (초기에는 숨김) -->
+      <div id="game-screen" class="game-screen" style="display: none">
+        <header>
+          <div class="row">
+            <h1>세넷 (Senet)</h1>
+            <div class="pill">
+              <span class="turn-dot" id="turn-dot"></span
+              ><span id="turn-label"></span>
+            </div>
+          </div>
+          <div class="row">
+            <button id="btn-rules" class="btn ghost">규칙</button>
+            <button id="btn-reset" class="btn ghost">새 게임</button>
+            <button id="btn-back-to-lobby" class="btn ghost">
+              로비로 돌아가기
+            </button>
+          </div>
+        </header>
+
+        <!-- 멀티플레이어 상태 표시 -->
+        <div
+          class="multiplayer-status card"
+          id="multiplayer-status"
+          style="display: none"
+        >
+          <div class="status-row">
+            <div class="connection-info">
+              <span class="status-dot" id="game-connection-dot"></span>
+              <span id="game-connection-text">연결됨</span>
+            </div>
+            <div class="room-info">
+              <span>방: </span>
+              <span id="current-room-name">-</span>
+            </div>
+          </div>
+          <div class="players-info">
+            <div class="player-item current" id="current-player">
+              <span class="player-name">나</span>
+              <span class="player-status">현재 턴</span>
+            </div>
+            <div class="player-item opponent" id="opponent-player">
+              <span class="player-name">상대방</span>
+              <span class="player-status">대기 중</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="wrap">
+          <section class="card">
+            <div class="row" style="align-items: center; gap: 12px">
+              <button id="roll" class="btn">막대기 던지기 (R)</button>
+              <div class="sticks" aria-live="polite" aria-atomic="true">
+                <div class="stick" id="s0"><div class="face">●</div></div>
+                <div class="stick" id="s1"><div class="face">●</div></div>
+                <div class="stick" id="s2"><div class="face">●</div></div>
+                <div class="stick" id="s3"><div class="face">●</div></div>
+              </div>
+              <div class="result" id="result">–</div>
+            </div>
+            <div id="status"></div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 6px">
+              특수칸: <b>15</b>·<b>26</b> 안전 / <b>27</b> 물(15→26 귀환) /
+              <b>30</b> 탈출
+            </div>
+          </section>
+
+          <section class="board card">
+            <div
+              id="board"
+              class="grid"
+              role="grid"
+              aria-label="세넷 보드"
+            ></div>
+          </section>
+        </div>
       </div>
     </div>
 
@@ -573,369 +275,78 @@
       </div>
     </dialog>
 
+    <!-- 방 생성 다이얼로그 -->
+    <dialog id="create-room">
+      <div class="modal">
+        <header><h2>새 게임방 만들기</h2></header>
+        <div class="body">
+          <div class="form-group">
+            <label for="room-name">방 이름:</label>
+            <input
+              type="text"
+              id="room-name"
+              placeholder="방 이름을 입력하세요"
+            />
+          </div>
+          <div class="form-group">
+            <label for="room-password">비밀번호 (선택사항):</label>
+            <input
+              type="password"
+              id="room-password"
+              placeholder="비밀번호를 입력하세요"
+            />
+          </div>
+        </div>
+        <footer>
+          <button
+            class="btn ghost"
+            onclick="document.getElementById('create-room').close()"
+          >
+            취소
+          </button>
+          <button id="btn-confirm-create-room" class="btn">방 만들기</button>
+        </footer>
+      </div>
+    </dialog>
+
     <script>
-      const board = document.getElementById("board");
-      const result = document.getElementById("result");
-      const statusEl = document.getElementById("status");
-      const rollBtn = document.getElementById("roll");
-      const resetBtn = document.getElementById("btn-reset");
-      const rulesBtn = document.getElementById("btn-rules");
-      const turnLabel = document.getElementById("turn-label");
-      const turnDot = document.getElementById("turn-dot");
-      const sticksEls = [0, 1, 2, 3].map((i) =>
-        document.getElementById("s" + i)
-      );
+      // 전역 변수로 설정
+      window.multiplayerUI = null;
+      window.multiplayerGame = null;
 
-      let turn = "W";
-      let roll = null;
-      let pieces = { W: [1, 3, 5, 7, 9], B: [2, 4, 6, 8, 10] };
-      let gameOver = false;
+      // DOM 로드 완료 후 초기화
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("🚀 DOM 로드 완료, 멀티플레이어 초기화 시작");
 
-      const SAFE = new Set([15, 26]);
-      const WATER = 27;
-      const EXIT = 30;
-      const GLYPH = { 15: "✚", 26: "★", 27: "⎈", 30: "⟶" };
-
-      function indexToRC(idx) {
-        const r = Math.floor((idx - 1) / 10);
-        let c = (idx - 1) % 10;
-        if (r % 2 === 1) c = 9 - c;
-        return { r, c };
-      }
-
-      function draw() {
-        board.innerHTML = "";
-        for (let i = 1; i <= 30; i++) {
-          const cell = document.createElement("div");
-          cell.className =
-            "cell" +
-            (SAFE.has(i) ? " safe" : "") +
-            (i === WATER ? " water" : "");
-          cell.dataset.idx = i;
-          const { r, c } = indexToRC(i);
-          cell.style.gridRow = r + 1;
-          cell.style.gridColumn = c + 1;
-          const idxTag = document.createElement("div");
-          idxTag.className = "idx";
-          idxTag.textContent = i;
-          cell.appendChild(idxTag);
-          if (GLYPH[i]) {
-            const g = document.createElement("div");
-            g.className = "glyph";
-            g.textContent = GLYPH[i];
-            cell.appendChild(g);
-          }
-          const p = pieceAt(i);
-          if (p) {
-            const el = document.createElement("div");
-            el.className = "piece " + p.side;
-            el.textContent = p.side;
-            el.onclick = () => onPieceClick(p.side, p.i);
-            cell.appendChild(el);
-          }
-          board.appendChild(cell);
-        }
-        updateTurnUI();
-        highlightMovablePieces();
-      }
-
-      function updateTurnUI() {
-        const name = turn === "W" ? "흰말 차례" : "검은말 차례";
-        turnLabel.textContent = name + (roll ? ` · 이동: ${roll}` : "");
-        turnDot.className = "turn-dot " + turn;
-      }
-
-      function pieceAt(idx) {
-        for (const s of ["W", "B"]) {
-          const k = pieces[s].indexOf(idx);
-          if (k !== -1) return { side: s, i: k };
-        }
-        return null;
-      }
-
-      function isAdjacentSameColor(idx, side) {
-        const L = pieceAt(idx - 1),
-          R = pieceAt(idx + 1);
-        return (L && L.side === side) || (R && R.side === side);
-      }
-      function isBlockadeSquare(idx, side) {
-        const here = pieceAt(idx);
-        if (!here || here.side !== side) return false;
-        return isAdjacentSameColor(idx, side);
-      }
-      function pathBlockedByOpponent(from, to, opp) {
-        for (let s = from + 1; s <= to; s++) {
-          if (isBlockadeSquare(s, opp)) return true;
-        }
-        return false;
-      }
-
-      function rollSticks() {
-        const faces = [0, 0, 0, 0].map(() => (Math.random() < 0.5 ? 0 : 1));
-        const sum = faces.reduce((a, b) => a + b, 0);
-        const p = sum === 0 ? 5 : sum;
-        sticksEls.forEach((el, i) => el.classList.toggle("on", !!faces[i]));
-        result.textContent = p;
-        return p;
-      }
-
-      function hasLegalMove(side, rollVal) {
-        const opp = side === "W" ? "B" : "W";
-        for (let i = 0; i < pieces[side].length; i++) {
-          const from = pieces[side][i];
-          if (from === 0) continue;
-          const to = from + rollVal;
-          if (to > EXIT) continue;
-          if (pathBlockedByOpponent(from, to, opp)) continue;
-          const occ = pieceAt(to);
-          if (occ && occ.side === side) continue;
-          if (occ && (SAFE.has(to) || isAdjacentSameColor(to, occ.side)))
-            continue;
-          if (to === WATER) {
-            const back = !pieceAt(15) ? 15 : !pieceAt(26) ? 26 : null;
-            if (!back) continue;
-          }
-          return true;
-        }
-        return false;
-      }
-
-      function highlightMovablePieces() {
-        document
-          .querySelectorAll(".piece")
-          .forEach((p) => p.classList.remove("can-move", "dim"));
-        if (!roll) {
-          document
-            .querySelectorAll(".piece")
-            .forEach((p) => p.classList.add("dim"));
-          return;
-        }
-        const side = turn;
-        const opp = side === "W" ? "B" : "W";
-        for (let i = 0; i < pieces[side].length; i++) {
-          const from = pieces[side][i];
-          if (from === 0) continue;
-          const to = from + roll;
-          if (to > EXIT) continue;
-          if (pathBlockedByOpponent(from, to, opp)) continue;
-          const occ = pieceAt(to);
-          if (occ && occ.side === side) continue;
-          if (occ && (SAFE.has(to) || isAdjacentSameColor(to, occ.side)))
-            continue;
-          if (to === WATER) {
-            const back = !pieceAt(15) ? 15 : !pieceAt(26) ? 26 : null;
-            if (!back) continue;
-          }
-          const cell = document.querySelector('.cell[data-idx="' + from + '"]');
-          const el = cell && cell.querySelector(".piece");
-          if (el) el.classList.add("can-move");
-        }
-        // dim others
-        document.querySelectorAll(".piece").forEach((el) => {
-          if (!el.classList.contains("can-move")) el.classList.add("dim");
-        });
-      }
-
-      function passTurnIfNoMoves() {
-        if (gameOver || roll == null) return;
-        if (!hasLegalMove(turn, roll)) {
-          statusEl.textContent =
-            (turn === "W" ? "흰말" : "검은말") +
-            " 이동 가능한 수 없음 — 턴을 넘깁니다.";
-          roll = null;
-          result.textContent = "–";
-          sticksEls.forEach((el) => el.classList.remove("on"));
-          clearHighlights();
-          draw();
-          turn = turn === "W" ? "B" : "W";
-          updateTurnUI();
-        } else {
-          statusEl.textContent = "";
-        }
-      }
-
-      function onPieceClick(side, i) {
-        if (gameOver || side !== turn) return;
-        if (!roll) {
-          roll = rollSticks();
-          updateTurnUI();
-          passTurnIfNoMoves();
-          if (roll == null) return;
-        }
-        showMoves(side, i);
-      }
-
-      function showMoves(side, i) {
-        clearHighlights();
-        const from = pieces[side][i];
-        const to = from + roll;
-        if (to > EXIT) return;
-        const opp = side === "W" ? "B" : "W";
-        if (pathBlockedByOpponent(from, to, opp)) return;
-        const occ = pieceAt(to);
-        if (occ) {
-          if (occ.side === side) return;
-          if (SAFE.has(to) || isAdjacentSameColor(to, occ.side)) return;
-        }
-        if (to === WATER) {
-          const back = !pieceAt(15) ? 15 : !pieceAt(26) ? 26 : null;
-          if (!back) return;
-        }
-        const cell = document.querySelector('.cell[data-idx="' + to + '"]');
-        if (cell) {
-          cell.classList.add("highlight");
-          const tip = document.createElement("div");
-          tip.className = "target-label";
-          tip.textContent =
-            to === EXIT ? "탈출" : to === WATER ? "물 → 귀환" : "이동";
-          cell.appendChild(tip);
-          cell.onclick = () => move(side, i, to);
-        }
-      }
-
-      function clearHighlights() {
-        document.querySelectorAll(".cell").forEach((c) => {
-          c.classList.remove("highlight");
-          c.onclick = null;
-          const t = c.querySelector(".target-label");
-          if (t) t.remove();
-        });
-      }
-
-      function checkWin(side) {
-        const win = pieces[side].every((p) => p === 0);
-        if (win) {
-          gameOver = true;
-          statusEl.textContent =
-            (side === "W" ? "흰말" : "검은말") + " 승리! 모두 탈출했습니다.";
-          alert(statusEl.textContent);
-        }
-        return win;
-      }
-
-      function animateMove(fromIdx, toIdx, side, done) {
-        const fromCell = document.querySelector(
-          '.cell[data-idx="' + fromIdx + '"]'
-        );
-        const toCell =
-          document.querySelector('.cell[data-idx="' + toIdx + '"]') ||
-          document.querySelector('.cell[data-idx="30"]');
-        if (!fromCell || !toCell) {
-          done();
-          return;
-        }
-        const pieceEl = fromCell.querySelector(".piece");
-        const fb = fromCell.getBoundingClientRect();
-        const tb = toCell.getBoundingClientRect();
-        const ghost = document.createElement("div");
-        ghost.className = "float-piece " + side;
-        ghost.style.background =
-          side === "W"
-            ? "linear-gradient(180deg,#e6f0ff,#cfe0ff)"
-            : "linear-gradient(180deg,#2b2f4f,#1c203b)";
-        ghost.style.color = side === "W" ? "#09121f" : "#e7eaff";
-        ghost.textContent = side;
-        document.body.appendChild(ghost);
-        ghost.style.left =
-          fb.left + window.scrollX + (fb.width - 58) / 2 + "px";
-        ghost.style.top = fb.top + window.scrollY + (fb.height - 58) / 2 + "px";
-        ghost.style.transition = "transform .28s ease";
-        const dx = tb.left - fb.left;
-        const dy = tb.top - fb.top;
-        requestAnimationFrame(() => {
-          ghost.style.transform = "translate(" + dx + "px," + dy + "px)";
-        });
+        // 약간의 지연을 주어 스크립트 로딩 완료 대기
         setTimeout(() => {
-          ghost.remove();
-          done();
-        }, 300);
-      }
-
-      function move(side, i, to) {
-        if (gameOver) return;
-        const from = pieces[side][i];
-        const opp = side === "W" ? "B" : "W";
-        let extraTurn = roll === 4 || roll === 5;
-        const finalize = () => {
-          if (checkWin(side)) {
-            roll = null;
-            result.textContent = "–";
-            sticksEls.forEach((el) => el.classList.remove("on"));
-            clearHighlights();
-            draw();
-            return;
-          }
-          roll = null;
-          result.textContent = "–";
-          sticksEls.forEach((el) => el.classList.remove("on"));
-          clearHighlights();
-          draw();
-          if (!extraTurn) {
-            turn = opp;
+          // MultiplayerUI 초기화
+          if (typeof MultiplayerUI !== "undefined") {
+            window.multiplayerUI = new MultiplayerUI();
+            console.log("✅ MultiplayerUI 초기화 완료");
+            
+            // MultiplayerSenetGame 초기화 (UI 초기화 후)
+            if (typeof MultiplayerSenetGame !== "undefined") {
+              window.multiplayerGame = new MultiplayerSenetGame();
+              console.log("✅ MultiplayerSenetGame 초기화 완료");
+              
+              // WebSocket 연결 설정
+              if (window.multiplayerGame && window.multiplayerUI) {
+                // 잠시 후 연결 설정 (UI의 WebSocket이 준비될 때까지 대기)
+                setTimeout(() => {
+                  window.multiplayerGame.connectToServer();
+                }, 1000);
+              }
+            } else {
+              console.error("❌ MultiplayerSenetGame 클래스를 찾을 수 없음");
+            }
           } else {
-            statusEl.textContent =
-              (side === "W" ? "흰말" : "검은말") + " 추가턴! (4/5)";
+            console.error("❌ MultiplayerUI 클래스를 찾을 수 없음");
           }
-          updateTurnUI();
-        };
 
-        if (to === WATER) {
-          const back = !pieceAt(15) ? 15 : !pieceAt(26) ? 26 : null;
-          if (!back) return;
-          pieces[side][i] = back;
-          extraTurn = false;
-          animateMove(from, WATER, side, finalize);
-          return;
-        }
-
-        if (to === EXIT) {
-          pieces[side][i] = 0;
-          animateMove(from, EXIT, side, finalize);
-          return;
-        }
-
-        const occ = pieceAt(to);
-        if (occ && occ.side === opp) {
-          pieces[occ.side][occ.i] = from;
-        }
-        pieces[side][i] = to;
-        animateMove(from, to, side, finalize);
-      }
-
-      // Controls
-      rollBtn.addEventListener("click", () => {
-        if (gameOver || roll) return;
-        roll = rollSticks();
-        updateTurnUI();
-        passTurnIfNoMoves();
-        highlightMovablePieces();
+          console.log("🎮 멀티플레이어 시스템 초기화 완료");
+        }, 100);
       });
-      resetBtn.addEventListener("click", () => {
-        turn = "W";
-        roll = null;
-        pieces = { W: [1, 3, 5, 7, 9], B: [2, 4, 6, 8, 10] };
-        gameOver = false;
-        statusEl.textContent = "";
-        result.textContent = "–";
-        sticksEls.forEach((el) => el.classList.remove("on"));
-        draw();
-      });
-      rulesBtn.addEventListener("click", () =>
-        document.getElementById("rules").showModal()
-      );
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "r" || e.key === "R") {
-          if (!roll && !gameOver) {
-            roll = rollSticks();
-            updateTurnUI();
-            passTurnIfNoMoves();
-            highlightMovablePieces();
-          }
-        }
-      });
-
-      // init
-      draw();
     </script>
   </body>
 </html>
