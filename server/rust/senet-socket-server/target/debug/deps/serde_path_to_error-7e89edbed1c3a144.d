@@ -1,9 +1,0 @@
-/Users/pobsiz/Desktop/PROJECT/mini-game/server/rust/senet-socket-server/target/debug/deps/serde_path_to_error-7e89edbed1c3a144.d: /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/lib.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/de.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/path.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/ser.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/wrap.rs
-
-/Users/pobsiz/Desktop/PROJECT/mini-game/server/rust/senet-socket-server/target/debug/deps/libserde_path_to_error-7e89edbed1c3a144.rmeta: /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/lib.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/de.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/path.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/ser.rs /Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/wrap.rs
-
-/Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/lib.rs:
-/Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/de.rs:
-/Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/path.rs:
-/Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/ser.rs:
-/Users/pobsiz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_path_to_error-0.1.17/src/wrap.rs:
