@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>세넷 (Senet) · 멀티플레이어</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="main-container">
+        <div class="welcome-section">
+          <h1>세넷 (Senet)</h1>
+          <p>고대 이집트의 전략 보드게임을 온라인에서 즐겨보세요</p>
+        </div>
+
+        <div class="game-options">
+          <div class="option-card" onclick="showCreateRoom()">
+            <h3>🆕 새 방 만들기</h3>
+            <p>새로운 게임 방을 생성하고 친구를 초대하세요</p>
+          </div>
+
+          <div class="option-card" onclick="showJoinRoom()">
+            <h3>🔗 방 참가하기</h3>
+            <p>방 코드를 입력하여 기존 방에 참가하세요</p>
+          </div>
+
+          <div class="option-card" onclick="showPublicRooms()">
+            <h3>🌐 공개 방 보기</h3>
+            <p>다른 플레이어들이 만든 공개 방을 찾아보세요</p>
+          </div>
+        </div>
+
+        <!-- 방 생성 섹션 -->
+        <div id="create-room-section" class="room-section hidden">
+          <h3>새 방 만들기</h3>
+          <form class="room-form" id="create-room-form">
+            <div class="form-group">
+              <label for="room-name">방 이름</label>
+              <input
+                type="text"
+                id="room-name"
+                placeholder="예: 친구들과 세넷"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="player-name">플레이어 이름</label>
+              <input
+                type="text"
+                id="player-name"
+                placeholder="당신의 이름"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="is-public" checked />
+                공개 방으로 설정
+              </label>
+            </div>
+            <button type="submit" class="btn">방 만들기</button>
+          </form>
+        </div>
+
+        <!-- 방 참가 섹션 -->
+        <div id="join-room-section" class="room-section hidden">
+          <h3>방 참가하기</h3>
+          <form class="room-form" id="join-room-form">
+            <div class="form-group">
+              <label for="room-code">방 코드</label>
+              <input
+                type="text"
+                id="room-code"
+                placeholder="예: ABC123"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="join-player-name">플레이어 이름</label>
+              <input
+                type="text"
+                id="join-player-name"
+                placeholder="당신의 이름"
+                required
+              />
+            </div>
+            <button type="submit" class="btn">방 참가</button>
+          </form>
+        </div>
+
+        <!-- 공개 방 목록 섹션 -->
+        <div id="public-rooms-section" class="room-section hidden">
+          <h3>공개 방 목록</h3>
+          <div id="rooms-list" class="room-list">
+            <div class="loading">방 목록을 불러오는 중...</div>
+          </div>
+        </div>
+
+        <!-- 메시지 표시 영역 -->
+        <div id="message-area"></div>
+
+        <!-- 뒤로가기 버튼 -->
+        <div
+          id="back-section"
+          class="hidden"
+          style="text-align: center; margin-top: 20px"
+        >
+          <button class="btn ghost" onclick="showMainMenu()">
+            ← 메인 메뉴로
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 메인 메뉴 표시
+      function showMainMenu() {
+        document.querySelector(".game-options").classList.remove("hidden");
+        document.getElementById("create-room-section").classList.add("hidden");
+        document.getElementById("join-room-section").classList.add("hidden");
+        document.getElementById("public-rooms-section").classList.add("hidden");
+        document.getElementById("back-section").classList.add("hidden");
+        clearMessages();
+      }
+
+      // 방 생성 화면 표시
+      function showCreateRoom() {
+        document.querySelector(".game-options").classList.add("hidden");
+        document
+          .getElementById("create-room-section")
+          .classList.remove("hidden");
+        document.getElementById("back-section").classList.remove("hidden");
+        clearMessages();
+      }
+
+      // 방 참가 화면 표시
+      function showJoinRoom() {
+        document.querySelector(".game-options").classList.add("hidden");
+        document.getElementById("join-room-section").classList.remove("hidden");
+        document.getElementById("back-section").classList.remove("hidden");
+        clearMessages();
+      }
+
+      // 공개 방 목록 표시
+      function showPublicRooms() {
+        document.querySelector(".game-options").classList.add("hidden");
+        document
+          .getElementById("public-rooms-section")
+          .classList.remove("hidden");
+        document.getElementById("back-section").classList.remove("hidden");
+        clearMessages();
+        loadPublicRooms();
+      }
+
+      // 메시지 표시
+      function showMessage(message, type = "info") {
+        const messageArea = document.getElementById("message-area");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = type;
+        messageDiv.textContent = message;
+        messageArea.appendChild(messageDiv);
+
+        // 5초 후 자동 제거
+        setTimeout(() => {
+          if (messageDiv.parentNode) {
+            messageDiv.remove();
+          }
+        }, 5000);
+      }
+
+      // 메시지 초기화
+      function clearMessages() {
+        document.getElementById("message-area").innerHTML = "";
+      }
+
+      // 공개 방 목록 로드
+      function loadPublicRooms() {
+        const roomsList = document.getElementById("rooms-list");
+        roomsList.innerHTML =
+          '<div class="loading">방 목록을 불러오는 중...</div>';
+
+        // 실제 구현에서는 서버에서 방 목록을 가져옴
+        setTimeout(() => {
+          const mockRooms = [
+            {
+              id: "ABC123",
+              name: "친구들과 세넷",
+              players: 2,
+              maxPlayers: 4,
+              status: "대기 중",
+            },
+            {
+              id: "DEF456",
+              name: "세넷 마스터",
+              players: 3,
+              maxPlayers: 4,
+              status: "게임 중",
+            },
+            {
+              id: "GHI789",
+              name: "초보자 환영",
+              players: 1,
+              maxPlayers: 4,
+              status: "대기 중",
+            },
+          ];
+
+          roomsList.innerHTML = "";
+          mockRooms.forEach((room) => {
+            const roomItem = createRoomItem(room);
+            roomsList.appendChild(roomItem);
+          });
+        }, 1000);
+      }
+
+      // 방 아이템 생성
+      function createRoomItem(room) {
+        const roomItem = document.createElement("div");
+        roomItem.className = "room-item";
+
+        const playerDots = Array.from(
+          { length: room.maxPlayers },
+          (_, i) =>
+            `<div class="player-dot ${i < room.players ? "active" : ""}"></div>`
+        ).join("");
+
+        roomItem.innerHTML = `
+          <div class="room-info">
+            <div class="room-name">${room.name}</div>
+            <div class="room-status">${room.status} • ${room.id}</div>
+          </div>
+          <div class="player-count">
+            <span>${room.players}/${room.maxPlayers}</span>
+            <div class="player-dots">${playerDots}</div>
+          </div>
+          <button class="btn-join" ${
+            room.status === "게임 중" ? "disabled" : ""
+          } onclick="joinRoom('${room.id}')">
+            ${room.status === "게임 중" ? "게임 중" : "참가"}
+          </button>
+        `;
+
+        return roomItem;
+      }
+
+      // 방 참가
+      function joinRoom(roomCode) {
+        const playerName = prompt("플레이어 이름을 입력하세요:");
+        if (playerName) {
+          showMessage(`방 ${roomCode}에 참가 중...`, "success");
+          // 실제 구현에서는 서버에 참가 요청을 보냄
+          setTimeout(() => {
+            window.location.href = `index.html?room=${roomCode}&player=${encodeURIComponent(
+              playerName
+            )}`;
+          }, 1000);
+        }
+      }
+
+      // 이벤트 리스너 등록
+      document.addEventListener("DOMContentLoaded", function () {
+        // 방 생성 폼 제출
+        document
+          .getElementById("create-room-form")
+          .addEventListener("submit", function (e) {
+            e.preventDefault();
+            const roomName = document.getElementById("room-name").value;
+            const playerName = document.getElementById("player-name").value;
+            const isPublic = document.getElementById("is-public").checked;
+
+            showMessage("방을 생성하는 중...", "success");
+
+            // 실제 구현에서는 서버에 방 생성 요청을 보냄
+            setTimeout(() => {
+              const roomCode = Math.random()
+                .toString(36)
+                .substr(2, 6)
+                .toUpperCase();
+              showMessage(
+                `방이 생성되었습니다! 방 코드: ${roomCode}`,
+                "success"
+              );
+              setTimeout(() => {
+                window.location.href = `index.html?room=${roomCode}&player=${encodeURIComponent(
+                  playerName
+                )}`;
+              }, 2000);
+            }, 1000);
+          });
+
+        // 방 참가 폼 제출
+        document
+          .getElementById("join-room-form")
+          .addEventListener("submit", function (e) {
+            e.preventDefault();
+            const roomCode = document.getElementById("room-code").value;
+            const playerName =
+              document.getElementById("join-player-name").value;
+
+            showMessage(`방 ${roomCode}에 참가 중...`, "success");
+
+            // 실제 구현에서는 서버에 참가 요청을 보냄
+            setTimeout(() => {
+              window.location.href = `index.html?room=${roomCode}&player=${encodeURIComponent(
+                playerName
+              )}`;
+            }, 1000);
+          });
+      });
+    </script>
+  </body>
+</html>

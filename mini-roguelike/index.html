@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>한 파일 HTML 로그라이크</title>
+    <style>
+      :root {
+        --bg: #0b0d10;
+        --panel: #12161b;
+        --wall: #1f2937;
+        --floor: #0f172a;
+        --floor-seen: #0b1220;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #38bdf8;
+        --danger: #f87171;
+        --good: #34d399;
+        --gold: #fbbf24;
+        --food: #f59e0b;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: radial-gradient(
+          1200px 800px at 60% -10%,
+          #111827 0%,
+          var(--bg) 60%
+        );
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+      .wrap {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 10px;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      header h1 {
+        font-size: 18px;
+        margin: 0;
+        letter-spacing: 0.5px;
+      }
+      header .mini {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .panel {
+        background: linear-gradient(180deg, #0d1117 0%, var(--panel) 100%);
+        border: 1px solid #1f2937;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.02);
+        overflow: hidden;
+      }
+      #hud {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        padding: 10px 12px;
+        gap: 8px;
+        border-bottom: 1px solid #111827;
+        font-size: 14px;
+      }
+      #hud .stats span {
+        margin-right: 14px;
+      }
+      #hud .stats b {
+        color: var(--accent);
+      }
+      #hud .btns button {
+        background: #0b1220;
+        border: 1px solid #1e293b;
+        color: var(--text);
+        border-radius: 10px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font: inherit;
+      }
+      #hud .btns button:hover {
+        border-color: #334155;
+      }
+      #game-holder {
+        position: relative;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        image-rendering: pixelated;
+        background: #07090d;
+      }
+      #help {
+        padding: 10px 12px;
+        border-top: 1px solid #111827;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      #log {
+        padding: 10px 12px;
+        border-top: 1px solid #111827;
+        font-size: 13px;
+        min-height: 3lh;
+      }
+      #log .msg {
+        opacity: 0.9;
+      }
+      #log .msg.dim {
+        opacity: 0.6;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      /* Inventory modal */
+      #inv[hidden] {
+        display: none;
+      }
+      #inv {
+        position: absolute;
+        inset: 8px;
+        background: rgba(6, 8, 11, 0.88);
+        border: 1px solid #1f2937;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        backdrop-filter: blur(4px);
+      }
+      #inv .title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid #111827;
+        font-size: 14px;
+      }
+      #inv .title .right {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #inv .body {
+        padding: 8px 12px;
+        overflow: auto;
+      }
+      #inv .item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border: 1px solid #111827;
+        border-radius: 8px;
+        margin: 6px 0;
+        background: linear-gradient(180deg, #0c1117 0%, #0b0f15 100%);
+      }
+      #inv .item .idx {
+        width: 26px;
+        text-align: center;
+        color: var(--gold);
+      }
+      #inv .item .name {
+        font-weight: 700;
+      }
+      #inv .item .meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #inv .hint {
+        color: var(--muted);
+        font-size: 12px;
+        padding: 6px 12px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>⚔️ 한 파일 HTML 로그라이크</h1>
+        <div class="mini">
+          이동: <b>WASD/화살표</b> · 대기: <b>.</b> · 물약: <b>Q</b> · 음식:
+          <b>F</b> · 인벤토리: <b>I</b> · 내려가기: <b>&gt;</b> · 재시작:
+          <b>R</b>
+        </div>
+      </header>
+
+      <div class="panel">
+        <div id="hud">
+          <div class="stats"></div>
+          <div class="btns">
+            <button id="btn-inv" title="인벤토리 (I)">인벤토리</button>
+            <button id="btn-help" title="도움말 토글">도움말</button>
+            <button id="btn-restart" title="다시 시작">재시작</button>
+          </div>
+        </div>
+        <div id="game-holder">
+          <canvas id="game" width="960" height="576"></canvas>
+          <div id="inv" hidden>
+            <div class="title">
+              인벤토리
+              <span class="right">번호 키로 사용/장착 · Esc/I 닫기</span>
+            </div>
+            <div class="body"></div>
+            <div class="hint">
+              포션은 <b>Q</b>, 음식은 <b>F</b>로 빠르게 사용 가능
+            </div>
+          </div>
+        </div>
+        <div id="help" hidden>
+          <p>
+            이 게임은 <b>한 개의 HTML 파일</b>만으로 동작하는 작은
+            로그라이크입니다. 현재 버전은 <b>경험치 & 레벨업</b>,
+            <b>장비/인벤토리</b>에 더해 <b>리스크 관리(배고픔 & 함정)</b>이
+            추가되었습니다. ✨
+          </p>
+          <ul>
+            <li>
+              배고픔은 매 턴 <b>1</b>씩 감소합니다. 40↓은 배고픔 경고, 0이 되면
+              매 턴 <b>굶주림 피해</b>.
+            </li>
+            <li>
+              음식(%)을 먹어 배고픔을 회복하세요. (F 키 또는 인벤토리에서 사용)
+            </li>
+            <li>
+              함정은 보이지 않다가 밟으면 발동(피해)하며, 이후엔 보입니다.
+            </li>
+            <li>아이템: ! 포션, ) 무기, [ 방어구, % 음식, ^(발동 후) 함정</li>
+          </ul>
+        </div>
+        <div id="log"></div>
+      </div>
+
+      <footer class="mini">© 브라우저에서 100% 로컬 실행.</footer>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+        // ===== Config =====
+        const VIEW_W = 40; // 타일 폭(가로)
+        const VIEW_H = 24; // 타일 높이(세로)
+        const FOV_RADIUS = 8;
+        const MAX_LEVEL = 5; // 던전 최대 층
+        const START_HP = 24;
+        const LOG_LINES = 6;
+        const HUNGER_MAX = 100; // 배고픔 최대치
+        const HUNGER_WARN = 40; // 경고 임계값
+
+        const COLORS = {
+          wall: "#1f2937",
+          floor: "#0f172a",
+          floorSeen: "#0b1220",
+          void: "#06080b",
+          stairs: "#fbbf24",
+          player: "#38bdf8",
+          enemy: "#f87171",
+          potion: "#34d399",
+          gear: "#fbbf24",
+          food: "#f59e0b",
+          text: "#e5e7eb",
+          dim: "#6b7280",
+        };
+
+        // ===== Loot Tables =====
+        const WEAPONS = [
+          { name: "녹슨 단검", dmg: [0, 1], tier: 1, w: 2 },
+          { name: "단검 +1", dmg: [1, 2], tier: 1, w: 3 },
+          { name: "장검 +2", dmg: [2, 3], tier: 2, w: 3 },
+          { name: "룬 블레이드 +3", dmg: [3, 4], tier: 3, w: 1 },
+        ];
+        const ARMORS = [
+          { name: "천옷", def: 1, tier: 1, w: 3 },
+          { name: "가죽 갑옷", def: 2, tier: 1, w: 3 },
+          { name: "사슬 갑옷", def: 3, tier: 2, w: 2 },
+          { name: "룬 갑옷", def: 4, tier: 3, w: 1 },
+        ];
+
+        // ===== DOM =====
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const hudEl = document.querySelector("#hud .stats");
+        const logEl = document.getElementById("log");
+        const helpEl = document.getElementById("help");
+        const invEl = document.getElementById("inv");
+        const invBody = invEl.querySelector(".body");
+        document.getElementById("btn-help").onclick = () =>
+          helpEl.toggleAttribute("hidden");
+        document.getElementById("btn-restart").onclick = () => restart();
+        document.getElementById("btn-inv").onclick = () => toggleInventory();
+
+        // ===== Utilities =====
+        const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+        const rnd = (n) => Math.floor(Math.random() * n);
+        const between = (a, b) => a + rnd(b - a + 1);
+        const inBounds = (x, y, w = state.w, h = state.h) =>
+          x >= 0 && y >= 0 && x < w && y < h;
+        const keyDirs = {
+          ArrowUp: [0, -1],
+          ArrowDown: [0, 1],
+          ArrowLeft: [-1, 0],
+          ArrowRight: [1, 0],
+          w: [0, -1],
+          s: [0, 1],
+          a: [-1, 0],
+          d: [1, 0],
+          W: [0, -1],
+          S: [0, 1],
+          A: [-1, 0],
+          D: [1, 0],
+        };
+        const deepCopy = (o) => JSON.parse(JSON.stringify(o));
+
+        // ===== Game State =====
+        const state = {
+          level: 1,
+          w: VIEW_W,
+          h: VIEW_H,
+          map: [],
+          seen: [],
+          visible: [],
+          player: {
+            x: 0,
+            y: 0,
+            hp: START_HP,
+            max: START_HP,
+            atk: [2, 6],
+            ply: 1,
+            exp: 0,
+            next: 20,
+            hunger: HUNGER_MAX,
+          },
+          equip: { weapon: null, armor: null },
+          enemies: [],
+          items: [], // ground items: {x,y,type:'potion'|'weapon'|'armor'|'food', ...}
+          traps: [], // {x,y,armed:true, seen:false, kind:'spike'}
+          inv: [], // inventory list
+          msgs: [],
+          over: false,
+          tileSize: 24,
+          invOpen: false,
+        };
+
+        const nextExp = (lv) => 20 + (lv - 1) * 15; // 필요 EXP 공식
+
+        // ===== Map Gen (rooms + corridors) =====
+        function genLevel() {
+          const W = state.w,
+            H = state.h;
+          state.map = Array.from({ length: H }, () => Array(W).fill(1));
+          state.seen = Array.from({ length: H }, () => Array(W).fill(false));
+          state.visible = Array.from({ length: H }, () => Array(W).fill(false));
+          state.traps = [];
+
+          const rooms = [];
+          const roomCount = between(8, 12);
+          for (let i = 0; i < roomCount; i++) {
+            const rw = between(4, 9),
+              rh = between(3, 7);
+            const rx = between(1, W - rw - 2),
+              ry = between(1, H - rh - 2);
+            for (let y = ry; y < ry + rh; y++)
+              for (let x = rx; x < rx + rw; x++) state.map[y][x] = 0;
+            rooms.push({
+              x: rx,
+              y: ry,
+              w: rw,
+              h: rh,
+              cx: Math.floor(rx + rw / 2),
+              cy: Math.floor(ry + rh / 2),
+            });
+          }
+          rooms.sort((a, b) => a.cx - b.cx);
+          for (let i = 1; i < rooms.length; i++)
+            connect(rooms[i - 1], rooms[i]);
+
+          state.player.x = rooms[0].cx;
+          state.player.y = rooms[0].cy;
+
+          let far = rooms[0],
+            farDist = -1;
+          for (const r of rooms) {
+            const d = dist(rooms[0].cx, rooms[0].cy, r.cx, r.cy);
+            if (d > farDist) {
+              farDist = d;
+              far = r;
+            }
+          }
+          state.map[far.cy][far.cx] = 2; // stairs
+
+          const floorCells = [];
+          for (let y = 1; y < H - 1; y++)
+            for (let x = 1; x < W - 1; x++)
+              if (state.map[y][x] === 0) floorCells.push({ x, y });
+
+          shuffle(floorCells);
+          const enemyCount = between(7 + state.level, 10 + state.level);
+          for (let i = 0; i < enemyCount && floorCells.length; i++) {
+            const { x, y } = floorCells.pop();
+            if (
+              (x === state.player.x && y === state.player.y) ||
+              state.map[y][x] !== 0
+            )
+              continue;
+            const kind = Math.random() < 0.5 ? "goblin" : "slime";
+            const hp =
+              kind === "goblin"
+                ? between(5, 7) + Math.floor(state.level / 2)
+                : between(6, 9) + Math.floor(state.level / 2);
+            const atk = kind === "goblin" ? [1, 4] : [1, 3];
+            state.enemies.push({ x, y, hp, max: hp, kind, atk });
+          }
+          // ground loot
+          const potionCount = between(2, 4);
+          for (let i = 0; i < potionCount && floorCells.length; i++) {
+            const { x, y } = floorCells.pop();
+            if (
+              (x === state.player.x && y === state.player.y) ||
+              state.map[y][x] !== 0
+            )
+              continue;
+            state.items.push({ x, y, type: "potion" });
+          }
+          const foodCount = between(2, 4);
+          for (let i = 0; i < foodCount && floorCells.length; i++) {
+            const { x, y } = floorCells.pop();
+            state.items.push({
+              x,
+              y,
+              type: "food",
+              name: "건조 식량",
+              hunger: [35, 55],
+            });
+          }
+          const gearCount = between(1, 2);
+          for (let i = 0; i < gearCount && floorCells.length; i++) {
+            const { x, y } = floorCells.pop();
+            const isWeapon = Math.random() < 0.5;
+            if (isWeapon) {
+              const w = randWeapon(state.level);
+              state.items.push({
+                x,
+                y,
+                type: "weapon",
+                name: w.name,
+                dmg: w.dmg,
+              });
+            } else {
+              const a = randArmor(state.level);
+              state.items.push({
+                x,
+                y,
+                type: "armor",
+                name: a.name,
+                def: a.def,
+              });
+            }
+          }
+
+          // traps (hidden)
+          const trapCount = between(
+            2 + Math.floor(state.level / 2),
+            4 + Math.floor(state.level / 2)
+          );
+          for (let i = 0; i < trapCount && floorCells.length; i++) {
+            const { x, y } = floorCells.pop();
+            if (x === state.player.x && y === state.player.y) continue;
+            state.traps.push({
+              x,
+              y,
+              armed: true,
+              seen: false,
+              kind: "spike",
+              dmg: [3, 8],
+            });
+          }
+
+          state.msgs = [];
+          log(`지하 ${state.level}층에 진입했습니다.`);
+          computeFOV();
+        }
+
+        function connect(a, b) {
+          let x = a.cx,
+            y = a.cy;
+          while (x !== b.cx) {
+            state.map[y][x] = 0;
+            x += x < b.cx ? 1 : -1;
+          }
+          while (y !== b.cy) {
+            state.map[y][x] = 0;
+            y += y < b.cy ? 1 : -1;
+          }
+          state.map[b.cy][b.cx] = 0;
+        }
+
+        function shuffle(arr) {
+          for (let i = arr.length - 1; i > 0; i--) {
+            const j = rnd(i + 1);
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+          }
+        }
+        function dist(x1, y1, x2, y2) {
+          const dx = x2 - x1,
+            dy = y2 - y1;
+          return Math.abs(dx) + Math.abs(dy);
+        }
+        function pickWeighted(arr, key) {
+          const sum = arr.reduce((s, o) => s + (o[key] || 1), 0);
+          let t = Math.random() * sum;
+          for (const o of arr) {
+            t -= o[key] || 1;
+            if (t <= 0) return deepCopy(o);
+          }
+          return deepCopy(arr[arr.length - 1]);
+        }
+        function randWeapon(lv) {
+          const cap = Math.min(3, 1 + Math.floor((lv + 1) / 2));
+          return pickWeighted(
+            WEAPONS.filter((w) => w.tier <= cap),
+            "w"
+          );
+        }
+        function randArmor(lv) {
+          const cap = Math.min(3, 1 + Math.floor((lv + 1) / 2));
+          return pickWeighted(
+            ARMORS.filter((a) => a.tier <= cap),
+            "w"
+          );
+        }
+
+        // ===== Field of View =====
+        function computeFOV() {
+          const W = state.w,
+            H = state.h,
+            px = state.player.x,
+            py = state.player.y;
+          for (let y = 0; y < H; y++)
+            for (let x = 0; x < W; x++) state.visible[y][x] = false;
+          const r = FOV_RADIUS;
+          for (let y = py - r; y <= py + r; y++) {
+            for (let x = px - r; x <= px + r; x++) {
+              if (!inBounds(x, y)) continue;
+              const dx = x - px,
+                dy = y - py;
+              if (dx * dx + dy * dy > r * r) continue;
+              if (lineOfSight(px, py, x, y)) {
+                state.visible[y][x] = true;
+                state.seen[y][x] = true;
+              }
+            }
+          }
+        }
+        function lineOfSight(x0, y0, x1, y1) {
+          let dx = Math.abs(x1 - x0),
+            sx = x0 < x1 ? 1 : -1;
+          let dy = -Math.abs(y1 - y0),
+            sy = y0 < y1 ? 1 : -1;
+          let err = dx + dy,
+            x = x0,
+            y = y0;
+          while (true) {
+            if (x === x1 && y === y1) return true;
+            const e2 = 2 * err;
+            if (e2 >= dy) {
+              err += dy;
+              x += sx;
+            }
+            if (e2 <= dx) {
+              err += dx;
+              y += sy;
+            }
+            if (!inBounds(x, y) || isWall(x, y)) return false;
+          }
+        }
+
+        // ===== Entity helpers =====
+        const isWall = (x, y) => state.map[y][x] === 1;
+        const isFloorish = (x, y) =>
+          state.map[y][x] === 0 || state.map[y][x] === 2;
+        const stairsAt = (x, y) => state.map[y][x] === 2;
+        const enemyAt = (x, y) =>
+          state.enemies.find((e) => e.x === x && e.y === y);
+        const itemAt = (x, y) =>
+          state.items.find((it) => it.x === x && it.y === y);
+        const occupied = (x, y) =>
+          !!enemyAt(x, y) || (state.player.x === x && state.player.y === y);
+        const trapAt = (x, y) =>
+          state.traps.find((t) => t.x === x && t.y === y);
+
+        // ===== Combat helpers =====
+        function playerDamageRoll() {
+          let base = between(state.player.atk[0], state.player.atk[1]);
+          const w = state.equip.weapon;
+          if (w) base += between(w.dmg[0], w.dmg[1]);
+          return base;
+        }
+        function playerDefense() {
+          return state.equip.armor ? state.equip.armor.def : 0;
+        }
+
+        // ===== Turn system =====
+        function tryMove(dx, dy) {
+          if (state.over || state.invOpen) return;
+          if (!dx && !dy) return endTurn();
+          const nx = clamp(state.player.x + dx, 0, state.w - 1);
+          const ny = clamp(state.player.y + dy, 0, state.h - 1);
+          if (!isFloorish(nx, ny)) {
+            log("벽에 막혔습니다.", true);
+            return;
+          }
+
+          const foe = enemyAt(nx, ny);
+          if (foe) {
+            attack(state.player, foe, "당신", foeName(foe));
+            if (foe.hp <= 0) {
+              const xp = expFor(foe);
+              log(`${foeName(foe)}을(를) 처치했습니다! (+${xp} EXP)`);
+              state.enemies = state.enemies.filter((e) => e !== foe);
+              gainExp(xp);
+            }
+            endTurn();
+            return;
+          }
+
+          state.player.x = nx;
+          state.player.y = ny;
+
+          // trap check (trigger on step if armed)
+          const t = trapAt(nx, ny);
+          if (t && t.armed) {
+            const dmg = between(t.dmg[0], t.dmg[1]);
+            state.player.hp -= dmg;
+            t.armed = false;
+            t.seen = true;
+            log(`함정 작동! 가시 함정에 ${dmg} 피해를 입었습니다.`, true);
+            checkGameOver();
+          }
+
+          const it = itemAt(nx, ny);
+          if (it) {
+            pickupItem(it);
+            state.items = state.items.filter((o) => o !== it);
+          }
+          if (stairsAt(nx, ny))
+            log("계단 위에 섰습니다. 다음 층으로 내려가려면 '>' 키.");
+          endTurn();
+        }
+
+        function pickupItem(it) {
+          if (it.type === "potion") {
+            state.inv.push({ type: "potion", name: "체력 물약" });
+            log("체력 물약을 주웠습니다. (보유 " + count("potion") + ")");
+          } else if (it.type === "weapon") {
+            state.inv.push({ type: "weapon", name: it.name, dmg: it.dmg });
+            log(`무기 ${it.name} 을(를) 주웠습니다.`);
+          } else if (it.type === "armor") {
+            state.inv.push({ type: "armor", name: it.name, def: it.def });
+            log(`방어구 ${it.name} 을(를) 주웠습니다.`);
+          } else if (it.type === "food") {
+            state.inv.push({ type: "food", name: it.name, hunger: it.hunger });
+            log(`음식 ${it.name} 을(를) 주웠습니다.`);
+          }
+          renderInventory();
+        }
+
+        function count(type) {
+          return state.inv.filter((i) => i.type === type).length;
+        }
+
+        function endTurn() {
+          // Hunger tick
+          if (!state.over) {
+            state.player.hunger = clamp(state.player.hunger - 1, 0, HUNGER_MAX);
+            if (state.player.hunger === 0) {
+              state.player.hp -= 1;
+              log("굶주림으로 1 피해를 받았습니다!", true);
+              checkGameOver();
+            } else if (state.player.hunger === HUNGER_WARN) {
+              log("배가 고파지기 시작합니다… (음식을 찾으세요)");
+            }
+          }
+
+          computeFOV();
+          enemiesAct();
+          computeFOV();
+          render();
+          updateHUD();
+          checkGameOver();
+        }
+
+        function enemiesAct() {
+          for (const e of state.enemies) {
+            if (e.hp <= 0) continue;
+            const d = dist(e.x, e.y, state.player.x, state.player.y);
+            let moved = false;
+            if (d === 1) {
+              attack(e, state.player, foeName(e), "당신");
+              moved = true;
+            } else if (
+              d <= FOV_RADIUS &&
+              lineOfSight(e.x, e.y, state.player.x, state.player.y)
+            ) {
+              const step = nextStepTowards(
+                { x: e.x, y: e.y },
+                { x: state.player.x, y: state.player.y }
+              );
+              if (step && !occupied(step.x, step.y)) {
+                e.x = step.x;
+                e.y = step.y;
+                moved = true;
+              }
+            }
+            if (!moved) {
+              const dirs = [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1],
+              ];
+              shuffle(dirs);
+              for (const [dx, dy] of dirs) {
+                const nx = e.x + dx,
+                  ny = e.y + dy;
+                if (
+                  inBounds(nx, ny) &&
+                  isFloorish(nx, ny) &&
+                  !occupied(nx, ny)
+                ) {
+                  e.x = nx;
+                  e.y = ny;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        function expFor(e) {
+          const base = e.kind === "goblin" ? 9 : 7;
+          return base + Math.max(0, state.level - 1) * 2; // 층이 깊을수록 EXP 증가
+        }
+
+        function gainExp(x) {
+          state.player.exp += x;
+          while (state.player.exp >= state.player.next) {
+            state.player.exp -= state.player.next;
+            levelUp();
+          }
+          updateHUD();
+        }
+
+        function levelUp() {
+          state.player.ply += 1;
+          const hpGain = between(3, 5);
+          state.player.max += hpGain;
+          state.player.hp = state.player.max;
+          if (state.player.ply % 2 === 0) state.player.atk[0] += 1;
+          state.player.atk[1] += 1;
+          state.player.next = nextExp(state.player.ply);
+          log(
+            `레벨 업! Lv ${state.player.ply} (최대 HP +${hpGain}, 공격력 강화)`,
+            true
+          );
+        }
+
+        function attack(att, def, aname, dname) {
+          let dmg;
+          if (att === state.player) dmg = playerDamageRoll();
+          else dmg = between(att.atk[0], att.atk[1]);
+          if (def === state.player) dmg = Math.max(1, dmg - playerDefense());
+          def.hp -= dmg;
+          log(`${aname} → ${dname} ${dmg} 피해`, def === state.player);
+        }
+
+        function foeName(e) {
+          return e.kind === "goblin" ? "도적 고블린" : "끈적한 슬라임";
+        }
+
+        function nextStepTowards(start, goal) {
+          const W = state.w,
+            H = state.h;
+          const q = [start];
+          const came = Array.from({ length: H }, () => Array(W).fill(null));
+          came[start.y][start.x] = { x: -1, y: -1 };
+          const dirs = [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ];
+          while (q.length) {
+            const cur = q.shift();
+            if (cur.x === goal.x && cur.y === goal.y) break;
+            for (const [dx, dy] of dirs) {
+              const nx = cur.x + dx,
+                ny = cur.y + dy;
+              if (!inBounds(nx, ny) || !isFloorish(nx, ny)) continue;
+              if (came[ny][nx]) continue;
+              if (occupied(nx, ny) && !(nx === goal.x && ny === goal.y))
+                continue; // allow goal tile
+              came[ny][nx] = cur;
+              q.push({ x: nx, y: ny });
+            }
+          }
+          if (!came[goal.y] || !came[goal.y][goal.x]) return null;
+          let cx = goal.x,
+            cy = goal.y;
+          let prev = came[cy][cx];
+          while (prev && !(prev.x === start.x && prev.y === start.y)) {
+            cx = prev.x;
+            cy = prev.y;
+            prev = came[cy][cx];
+          }
+          return { x: cx, y: cy };
+        }
+
+        // ===== Consumables & Equipment =====
+        function consumePotion() {
+          const idx = state.inv.findIndex((i) => i.type === "potion");
+          if (idx < 0) {
+            log("물약이 없습니다.", true);
+            return false;
+          }
+          const heal = between(6, 10);
+          state.inv.splice(idx, 1);
+          state.player.hp = clamp(state.player.hp + heal, 0, state.player.max);
+          log(
+            `물약을 마셔 ${heal} 회복했습니다. (HP ${state.player.hp}/${state.player.max})`
+          );
+          renderInventory();
+          return true;
+        }
+
+        function consumeFood() {
+          const idx = state.inv.findIndex((i) => i.type === "food");
+          if (idx < 0) {
+            log("음식이 없습니다.", true);
+            return false;
+          }
+          const it = state.inv[idx];
+          const gain = between(it.hunger[0], it.hunger[1]);
+          state.inv.splice(idx, 1);
+          const before = state.player.hunger;
+          state.player.hunger = clamp(
+            state.player.hunger + gain,
+            0,
+            HUNGER_MAX
+          );
+          log(
+            `음식을 먹었습니다. 배고픔 +${state.player.hunger - before} (현재 ${
+              state.player.hunger
+            }/${HUNGER_MAX})`
+          );
+          renderInventory();
+          return true;
+        }
+
+        function equipItem(item) {
+          if (item.type === "weapon") {
+            const prev = state.equip.weapon;
+            state.equip.weapon = { name: item.name, dmg: item.dmg };
+            if (prev)
+              state.inv.push({
+                type: "weapon",
+                name: prev.name,
+                dmg: prev.dmg,
+              });
+            log(`무기 장착: ${item.name}`);
+          } else if (item.type === "armor") {
+            const prev = state.equip.armor;
+            state.equip.armor = { name: item.name, def: item.def };
+            if (prev)
+              state.inv.push({ type: "armor", name: prev.name, def: prev.def });
+            log(`방어구 장착: ${item.name}`);
+          }
+          renderInventory();
+        }
+
+        function useInvIndex(idx) {
+          if (idx < 0 || idx >= state.inv.length) return;
+          const item = state.inv[idx];
+          if (item.type === "potion") {
+            state.inv.splice(idx, 1);
+            const heal = between(6, 10);
+            state.player.hp = clamp(
+              state.player.hp + heal,
+              0,
+              state.player.max
+            );
+            log(
+              `물약을 마셔 ${heal} 회복했습니다. (HP ${state.player.hp}/${state.player.max})`
+            );
+            renderInventory();
+            endTurn();
+          } else if (item.type === "weapon" || item.type === "armor") {
+            state.inv.splice(idx, 1);
+            equipItem(item);
+            endTurn();
+          } else if (item.type === "food") {
+            state.inv.splice(idx, 1);
+            const gain = between(item.hunger[0], item.hunger[1]);
+            const before = state.player.hunger;
+            state.player.hunger = clamp(
+              state.player.hunger + gain,
+              0,
+              HUNGER_MAX
+            );
+            log(
+              `음식을 먹었습니다. 배고픔 +${
+                state.player.hunger - before
+              } (현재 ${state.player.hunger}/${HUNGER_MAX})`
+            );
+            renderInventory();
+            endTurn();
+          }
+        }
+
+        function drinkPotion() {
+          if (!state.over && consumePotion()) endTurn();
+        }
+        function eatFood() {
+          if (!state.over && consumeFood()) endTurn();
+        }
+
+        function descend() {
+          if (state.over) return;
+          if (!stairsAt(state.player.x, state.player.y)) {
+            log("여기는 계단이 아닙니다.", true);
+            return;
+          }
+          if (state.level >= MAX_LEVEL) {
+            log("당신은 최심부의 빛을 보았습니다. 승리! 🏆");
+            state.over = true;
+            render();
+            updateHUD();
+            return;
+          }
+          state.level++;
+          genLevel();
+          render();
+          updateHUD();
+        }
+
+        function checkGameOver() {
+          if (state.player.hp > 0) return;
+          state.player.hp = 0;
+          log("당신은 쓰러졌습니다... R 키로 재시작하세요.", true);
+          state.over = true;
+        }
+
+        // ===== Rendering =====
+        function updateHUD() {
+          const p = state.player;
+          const wName = state.equip.weapon ? state.equip.weapon.name : "-";
+          const aName = state.equip.armor ? state.equip.armor.name : "-";
+          const hungerState =
+            p.hunger === 0
+              ? "굶주림"
+              : p.hunger <= HUNGER_WARN
+              ? "허기"
+              : "양호";
+          hudEl.innerHTML = `층수 <b>${state.level}</b> · HP <b>${p.hp}/${
+            p.max
+          }</b> · 포션 <b>${count("potion")}</b> · 음식 <b>${count(
+            "food"
+          )}</b> · 적 <b>${state.enemies.length}</b> · Lv <b>${
+            p.ply
+          }</b> (EXP ${p.exp}/${p.next}) · 배고픔 <b>${
+            p.hunger
+          }/${HUNGER_MAX}</b> (${hungerState}) · 무기 <b>${escapeHtml(
+            wName
+          )}</b> · 방어구 <b>${escapeHtml(aName)}</b>`;
+        }
+
+        function drawTile(x, y, color) {
+          const s = state.tileSize;
+          ctx.fillStyle = color;
+          ctx.fillRect(x * s, y * s, s, s);
+        }
+
+        function render() {
+          const s = state.tileSize;
+          canvas.width = state.w * s;
+          canvas.height = state.h * s;
+          ctx.fillStyle = COLORS.void;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          for (let y = 0; y < state.h; y++) {
+            for (let x = 0; x < state.w; x++) {
+              const seen = state.seen[y][x],
+                vis = state.visible[y][x];
+              let base = COLORS.void;
+              if (state.map[y][x] === 1)
+                base = seen ? COLORS.wall : COLORS.void;
+              else
+                base = vis
+                  ? COLORS.floor
+                  : seen
+                  ? COLORS.floorSeen
+                  : COLORS.void;
+              drawTile(x, y, base);
+              if (state.map[y][x] === 2 && (vis || seen))
+                drawGlyph(x, y, ">", COLORS.stairs);
+            }
+          }
+          for (const it of state.items) {
+            if (state.visible[it.y][it.x])
+              drawGlyph(it.x, it.y, itemGlyph(it), itemColor(it));
+          }
+          // draw traps only after revealed
+          for (const t of state.traps) {
+            if (t.seen && state.visible[t.y][t.x])
+              drawGlyph(t.x, t.y, "^", COLORS.enemy);
+          }
+          for (const e of state.enemies) {
+            if (state.visible[e.y][e.x])
+              drawGlyph(
+                e.x,
+                e.y,
+                e.kind === "goblin" ? "g" : "s",
+                COLORS.enemy
+              );
+          }
+          drawGlyph(state.player.x, state.player.y, "@", COLORS.player);
+          ctx.strokeStyle = "#0b1220";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+        }
+
+        function itemGlyph(it) {
+          return it.type === "potion"
+            ? "!"
+            : it.type === "weapon"
+            ? ")"
+            : it.type === "armor"
+            ? "["
+            : "%";
+        }
+        function itemColor(it) {
+          return it.type === "potion"
+            ? COLORS.potion
+            : it.type === "food"
+            ? COLORS.food
+            : COLORS.gear;
+        }
+
+        function drawGlyph(x, y, ch, color) {
+          const s = state.tileSize;
+          const px = x * s,
+            py = y * s;
+          ctx.fillStyle = color;
+          ctx.font = `${Math.floor(
+            s * 0.9
+          )}px ui-monospace, Consolas, monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(ch, px + s / 2, py + s / 2 + 1);
+        }
+
+        function resize() {
+          const pad = 24;
+          const maxW = Math.min(window.innerWidth - pad * 2, 1100 - pad * 2);
+          const maxH = window.innerHeight - 220;
+          const tile = Math.floor(Math.min(maxW / VIEW_W, maxH / VIEW_H));
+          state.tileSize = clamp(tile, 16, 32);
+          render();
+        }
+        window.addEventListener("resize", resize);
+
+        // ===== Inventory UI =====
+        function toggleInventory(force) {
+          if (typeof force === "boolean") state.invOpen = force;
+          else state.invOpen = !state.invOpen;
+          invEl.hidden = !state.invOpen;
+          renderInventory();
+        }
+        function renderInventory() {
+          if (invEl.hidden) return;
+          const rows = state.inv
+            .map((it, i) => {
+              let meta = "";
+              if (it.type === "potion") meta = "HP +6~10";
+              else if (it.type === "weapon")
+                meta = `피해 +${it.dmg[0]}~+${it.dmg[1]}`;
+              else if (it.type === "armor") meta = `방어 +${it.def}`;
+              else if (it.type === "food")
+                meta = `배고픔 +${it.hunger[0]}~+${it.hunger[1]}`;
+              const icon =
+                it.type === "potion"
+                  ? "!"
+                  : it.type === "weapon"
+                  ? ")"
+                  : it.type === "armor"
+                  ? "["
+                  : "%";
+              const name =
+                it.name || (it.type === "potion" ? "체력 물약" : "식량");
+              return `<div class="item"><div class="idx">${
+                i + 1
+              }</div><div class="name">${escapeHtml(
+                icon + " " + name
+              )}</div><div class="meta">${meta}</div></div>`;
+            })
+            .join("");
+          invBody.innerHTML =
+            rows ||
+            '<div class="item"><div class="name">(비어 있음)</div></div>';
+        }
+
+        // ===== Messaging =====
+        function log(msg, danger = false) {
+          state.msgs.unshift({ t: msg, danger });
+          state.msgs = state.msgs.slice(0, LOG_LINES);
+          logEl.innerHTML = state.msgs
+            .map(
+              (m, i) =>
+                `<div class="msg ${i > 1 ? "dim" : ""}" style="color:${
+                  m.danger ? COLORS.enemy : COLORS.text
+                }">${escapeHtml(m.t)}</div>`
+            )
+            .join("");
+        }
+        function escapeHtml(s) {
+          return (s + "").replace(
+            /[&<>"]/g,
+            (c) =>
+              ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])
+          );
+        }
+
+        // ===== Input =====
+        window.addEventListener(
+          "keydown",
+          (e) => {
+            if (e.repeat) return;
+            if (state.invOpen) {
+              if (e.key === "Escape" || e.key === "i" || e.key === "I") {
+                toggleInventory(false);
+                e.preventDefault();
+                return;
+              }
+              if (/^[1-9]$/.test(e.key)) {
+                useInvIndex(parseInt(e.key, 10) - 1);
+                e.preventDefault();
+                return;
+              }
+              return; // 인벤토리 열린 동안 이동 등 차단
+            }
+            if (e.key in keyDirs) {
+              const [dx, dy] = keyDirs[e.key];
+              tryMove(dx, dy);
+              e.preventDefault();
+              return;
+            }
+            if (e.key === ".") {
+              endTurn();
+              e.preventDefault();
+              return;
+            }
+            if (e.key === "q" || e.key === "Q") {
+              drinkPotion();
+              e.preventDefault();
+              return;
+            }
+            if (e.key === "f" || e.key === "F") {
+              eatFood();
+              e.preventDefault();
+              return;
+            }
+            if (e.key === "i" || e.key === "I") {
+              toggleInventory(true);
+              e.preventDefault();
+              return;
+            }
+            if (e.key === ">") {
+              descend();
+              e.preventDefault();
+              return;
+            }
+            if (e.key === "r" || e.key === "R") {
+              restart();
+              e.preventDefault();
+              return;
+            }
+          },
+          { passive: false }
+        );
+
+        // ===== Start / Restart =====
+        function restart() {
+          state.level = 1;
+          state.player = {
+            x: 0,
+            y: 0,
+            hp: START_HP,
+            max: START_HP,
+            atk: [2, 6],
+            ply: 1,
+            exp: 0,
+            next: nextExp(1),
+            hunger: HUNGER_MAX,
+          };
+          state.equip = { weapon: null, armor: null };
+          state.enemies = [];
+          state.items = [];
+          state.inv = [];
+          state.over = false;
+          state.invOpen = false;
+          invEl.hidden = true;
+          state.traps = [];
+          genLevel();
+          updateHUD();
+          render();
+          renderInventory();
+        }
+
+        // ===== Boot =====
+        restart();
+        resize();
+      })();
+    </script>
+  </body>
+</html>
