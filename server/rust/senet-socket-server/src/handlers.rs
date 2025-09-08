@@ -474,7 +474,7 @@ async fn client_loop(state: AppState, socket: WebSocket) {
                     let msg = ServerMsg::SticksRolled {
                         room_id: room.id.clone(),
                         game_id: inner.game_id.clone(),
-                        player_id: pid,
+                        player_id: pid.clone(),
                         roll,
                         faces,
                         turn: inner.game.turn.to_string(),
@@ -501,6 +501,28 @@ async fn client_loop(state: AppState, socket: WebSocket) {
                                 room.tx.receiver_count()
                             );
                         }
+                    }
+
+                    // 이동할 수 없는 경우 자동으로 턴 패스
+                    if !can_move && !inner.game.game_over {
+                        info!(
+                            "🚫 이동 불가능 - 자동 턴 패스: 방={}, 플레이어={}",
+                            room.id, pid
+                        );
+
+                        // 턴 전환
+                        inner.game.turn = if inner.game.turn == 'W' { 'B' } else { 'W' };
+                        inner.game.last_roll = None; // 롤 값 초기화
+
+                        // 턴 변경 브로드캐스트
+                        room.tx
+                            .send(ServerMsg::TurnChanged {
+                                room_id: room.id.clone(),
+                                game_id: inner.game_id.clone(),
+                                new_turn: inner.game.turn.to_string(),
+                                reason: "no_legal_moves".to_string(),
+                            })
+                            .ok();
                     }
 
                     inner.last_activity = ts();
@@ -676,6 +698,80 @@ async fn client_loop(state: AppState, socket: WebSocket) {
                             })
                             .ok();
                     }
+                    inner.last_activity = ts();
+                }
+            }
+
+            // ---------- PASS_TURN ----------
+            "PASS_TURN" => {
+                if let Some(room) = &joined_room {
+                    let room = room.clone();
+                    let pid = get_str(&data, "playerId");
+                    let rid = get_str(&data, "roomId");
+
+                    if room.id != rid {
+                        continue;
+                    }
+
+                    let mut inner = room.inner.write().await;
+                    if inner.status != RoomStatus::Playing {
+                        send_err(
+                            &tx,
+                            "GAME_NOT_STARTED",
+                            "게임이 시작되지 않았습니다",
+                            json!({"roomId":room.id}),
+                        )
+                        .await;
+                        continue;
+                    }
+
+                    // 턴 체크
+                    let cur_pid = inner.seats.get(&inner.game.turn).map(|e| e.value().clone());
+                    if cur_pid.as_deref() != Some(&pid) {
+                        send_err(
+                            &tx,
+                            "NOT_YOUR_TURN",
+                            "내 턴이 아닙니다",
+                            json!({"roomId":room.id}),
+                        )
+                        .await;
+                        continue;
+                    }
+
+                    // 현재 롤 값 확인
+                    let current_roll = inner.game.last_roll;
+                    let requested_roll = data.get("roll").and_then(|x| x.as_u64()).map(|x| x as u8);
+
+                    if current_roll != requested_roll {
+                        send_err(
+                            &tx,
+                            "INVALID_ROLL",
+                            "잘못된 롤 값입니다",
+                            json!({"roomId":room.id}),
+                        )
+                        .await;
+                        continue;
+                    }
+
+                    // 턴 전환
+                    inner.game.turn = if inner.game.turn == 'W' { 'B' } else { 'W' };
+                    inner.game.last_roll = None; // 롤 값 초기화
+
+                    info!(
+                        "🔄 턴 패스: 방={}, 플레이어={}, 새 턴={}",
+                        room.id, pid, inner.game.turn
+                    );
+
+                    // 턴 변경 브로드캐스트
+                    room.tx
+                        .send(ServerMsg::TurnChanged {
+                            room_id: room.id.clone(),
+                            game_id: inner.game_id.clone(),
+                            new_turn: inner.game.turn.to_string(),
+                            reason: "pass_turn".to_string(),
+                        })
+                        .ok();
+
                     inner.last_activity = ts();
                 }
             }

@@ -210,7 +210,7 @@
             </div>
             <div class="body"></div>
             <div class="hint">
-              포션은 <b>Q</b>, 음식은 <b>F</b>로 빠르게 사용 가능
+              포션(<b>Q</b>) / 음식(<b>F</b>) 빠른 사용 가능
             </div>
           </div>
         </div>
@@ -218,21 +218,23 @@
           <p>
             이 게임은 <b>한 개의 HTML 파일</b>만으로 동작하는 작은
             로그라이크입니다. 현재 버전은 <b>경험치 & 레벨업</b>,
-            <b>장비/인벤토리</b>에 더해 <b>리스크 관리(배고픔 & 함정)</b>이
-            추가되었습니다. ✨
+            <b>장비/인벤토리</b>, <b>배고픔 & 함정</b>에 더해
+            <b>보스전 + 난이도 곡선</b>이 추가되었습니다. ✨
           </p>
           <ul>
+            <li>층이 깊어질수록 적의 체력/피해/개체 수가 조금씩 증가합니다.</li>
             <li>
-              배고픔은 매 턴 <b>1</b>씩 감소합니다. 40↓은 배고픔 경고, 0이 되면
-              매 턴 <b>굶주림 피해</b>.
+              <b>마지막 층(지하 5층)</b>엔 <b>보스(B)</b>가 있으며, 보스를
+              처치하면 그 자리에서 계단이 나타납니다.
             </li>
             <li>
-              음식(%)을 먹어 배고픔을 회복하세요. (F 키 또는 인벤토리에서 사용)
+              최종 승리: 마지막 층에서 <b>보스를 처치</b>하고, 생긴 계단에서
+              <b>&gt;</b>로 탈출.
             </li>
             <li>
-              함정은 보이지 않다가 밟으면 발동(피해)하며, 이후엔 보입니다.
+              아이템: ! 포션, ) 무기, [ 방어구, % 음식, ^(발동 후 표시) 함정, B
+              보스
             </li>
-            <li>아이템: ! 포션, ) 무기, [ 방어구, % 음식, ^(발동 후) 함정</li>
           </ul>
         </div>
         <div id="log"></div>
@@ -245,14 +247,14 @@
       (() => {
         "use strict";
         // ===== Config =====
-        const VIEW_W = 40; // 타일 폭(가로)
-        const VIEW_H = 24; // 타일 높이(세로)
+        const VIEW_W = 40;
+        const VIEW_H = 24;
         const FOV_RADIUS = 8;
-        const MAX_LEVEL = 5; // 던전 최대 층
+        const MAX_LEVEL = 5; // 마지막 층 = 보스전
         const START_HP = 24;
         const LOG_LINES = 6;
-        const HUNGER_MAX = 100; // 배고픔 최대치
-        const HUNGER_WARN = 40; // 경고 임계값
+        const HUNGER_MAX = 100;
+        const HUNGER_WARN = 40;
 
         const COLORS = {
           wall: "#1f2937",
@@ -384,6 +386,7 @@
           state.player.x = rooms[0].cx;
           state.player.y = rooms[0].cy;
 
+          // farthest room center
           let far = rooms[0],
             farDist = -1;
           for (const r of rooms) {
@@ -393,7 +396,11 @@
               far = r;
             }
           }
-          state.map[far.cy][far.cx] = 2; // stairs
+
+          // Stairs or Boss placement
+          if (state.level < MAX_LEVEL) {
+            state.map[far.cy][far.cx] = 2; // stairs
+          }
 
           const floorCells = [];
           for (let y = 1; y < H - 1; y++)
@@ -401,7 +408,11 @@
               if (state.map[y][x] === 0) floorCells.push({ x, y });
 
           shuffle(floorCells);
-          const enemyCount = between(7 + state.level, 10 + state.level);
+          const dmgBoost = Math.floor(state.level / 3); // 난이도 곡선: 피해 소폭 증가
+          const enemyBase = between(7 + state.level, 10 + state.level);
+          let enemyCount =
+            state.level === MAX_LEVEL ? Math.max(6, enemyBase - 2) : enemyBase;
+
           for (let i = 0; i < enemyCount && floorCells.length; i++) {
             const { x, y } = floorCells.pop();
             if (
@@ -411,12 +422,30 @@
               continue;
             const kind = Math.random() < 0.5 ? "goblin" : "slime";
             const hp =
-              kind === "goblin"
-                ? between(5, 7) + Math.floor(state.level / 2)
-                : between(6, 9) + Math.floor(state.level / 2);
-            const atk = kind === "goblin" ? [1, 4] : [1, 3];
+              (kind === "goblin" ? between(5, 7) : between(6, 9)) +
+              Math.floor(state.level / 2);
+            const atkBase = kind === "goblin" ? [1, 4] : [1, 3];
+            const atk = [atkBase[0] + dmgBoost, atkBase[1] + dmgBoost];
             state.enemies.push({ x, y, hp, max: hp, kind, atk });
           }
+
+          // Boss on final floor
+          if (state.level === MAX_LEVEL) {
+            const bx = far.cx,
+              by = far.cy;
+            const bossHP = 60 + Math.floor(state.player.ply / 2) * 5;
+            const bossATK = [4 + dmgBoost, 8 + dmgBoost + 1];
+            state.enemies.push({
+              x: bx,
+              y: by,
+              hp: bossHP,
+              max: bossHP,
+              kind: "boss",
+              atk: bossATK,
+            });
+            log("최심부의 기척이 느껴집니다… 보스가 이 층 어딘가에 있습니다.");
+          }
+
           // ground loot
           const potionCount = between(2, 4);
           for (let i = 0; i < potionCount && floorCells.length; i++) {
@@ -590,10 +619,10 @@
           state.enemies.find((e) => e.x === x && e.y === y);
         const itemAt = (x, y) =>
           state.items.find((it) => it.x === x && it.y === y);
-        const occupied = (x, y) =>
-          !!enemyAt(x, y) || (state.player.x === x && state.player.y === y);
         const trapAt = (x, y) =>
           state.traps.find((t) => t.x === x && t.y === y);
+        const occupied = (x, y) =>
+          !!enemyAt(x, y) || (state.player.x === x && state.player.y === y);
 
         // ===== Combat helpers =====
         function playerDamageRoll() {
@@ -605,6 +634,7 @@
         function playerDefense() {
           return state.equip.armor ? state.equip.armor.def : 0;
         }
+        const isBoss = (e) => e.kind === "boss";
 
         // ===== Turn system =====
         function tryMove(dx, dy) {
@@ -621,9 +651,14 @@
           if (foe) {
             attack(state.player, foe, "당신", foeName(foe));
             if (foe.hp <= 0) {
+              const wasBoss = isBoss(foe);
               const xp = expFor(foe);
               log(`${foeName(foe)}을(를) 처치했습니다! (+${xp} EXP)`);
               state.enemies = state.enemies.filter((e) => e !== foe);
+              if (wasBoss) {
+                state.map[foe.y][foe.x] = 2; // spawn stairs at boss location
+                log("보스가 쓰러지며 발밑에 계단이 드러났습니다!");
+              }
               gainExp(xp);
             }
             endTurn();
@@ -633,7 +668,7 @@
           state.player.x = nx;
           state.player.y = ny;
 
-          // trap check (trigger on step if armed)
+          // trap check
           const t = trapAt(nx, ny);
           if (t && t.armed) {
             const dmg = between(t.dmg[0], t.dmg[1]);
@@ -697,53 +732,59 @@
         }
 
         function enemiesAct() {
-          for (const e of state.enemies) {
+          for (const e of state.enemies.slice()) {
+            // slice: 안전한 순회
             if (e.hp <= 0) continue;
-            const d = dist(e.x, e.y, state.player.x, state.player.y);
-            let moved = false;
-            if (d === 1) {
-              attack(e, state.player, foeName(e), "당신");
-              moved = true;
-            } else if (
-              d <= FOV_RADIUS &&
-              lineOfSight(e.x, e.y, state.player.x, state.player.y)
-            ) {
-              const step = nextStepTowards(
-                { x: e.x, y: e.y },
-                { x: state.player.x, y: state.player.y }
-              );
-              if (step && !occupied(step.x, step.y)) {
-                e.x = step.x;
-                e.y = step.y;
-                moved = true;
-              }
-            }
-            if (!moved) {
-              const dirs = [
-                [1, 0],
-                [-1, 0],
-                [0, 1],
-                [0, -1],
-              ];
-              shuffle(dirs);
-              for (const [dx, dy] of dirs) {
-                const nx = e.x + dx,
-                  ny = e.y + dy;
-                if (
-                  inBounds(nx, ny) &&
-                  isFloorish(nx, ny) &&
-                  !occupied(nx, ny)
-                ) {
-                  e.x = nx;
-                  e.y = ny;
-                  break;
+            const perform = () => {
+              const d = dist(e.x, e.y, state.player.x, state.player.y);
+              let acted = false;
+              if (d === 1) {
+                attack(e, state.player, foeName(e), "당신");
+                acted = true;
+              } else if (
+                d <= FOV_RADIUS &&
+                lineOfSight(e.x, e.y, state.player.x, state.player.y)
+              ) {
+                const step = nextStepTowards(
+                  { x: e.x, y: e.y },
+                  { x: state.player.x, y: state.player.y }
+                );
+                if (step && !occupied(step.x, step.y)) {
+                  e.x = step.x;
+                  e.y = step.y;
+                  acted = true;
                 }
               }
-            }
+              if (!acted) {
+                const dirs = [
+                  [1, 0],
+                  [-1, 0],
+                  [0, 1],
+                  [0, -1],
+                ];
+                shuffle(dirs);
+                for (const [dx, dy] of dirs) {
+                  const nx = e.x + dx,
+                    ny = e.y + dy;
+                  if (
+                    inBounds(nx, ny) &&
+                    isFloorish(nx, ny) &&
+                    !occupied(nx, ny)
+                  ) {
+                    e.x = nx;
+                    e.y = ny;
+                    break;
+                  }
+                }
+              }
+            };
+            perform();
+            if (isBoss(e) && Math.random() < 0.3) perform(); // 보스는 30% 확률로 추가 행동
           }
         }
 
         function expFor(e) {
+          if (isBoss(e)) return 50;
           const base = e.kind === "goblin" ? 9 : 7;
           return base + Math.max(0, state.level - 1) * 2; // 층이 깊을수록 EXP 증가
         }
@@ -781,7 +822,11 @@
         }
 
         function foeName(e) {
-          return e.kind === "goblin" ? "도적 고블린" : "끈적한 슬라임";
+          return isBoss(e)
+            ? "지하의 군주"
+            : e.kind === "goblin"
+            ? "도적 고블린"
+            : "끈적한 슬라임";
         }
 
         function nextStepTowards(start, goal) {
@@ -936,8 +981,8 @@
             log("여기는 계단이 아닙니다.", true);
             return;
           }
-          if (state.level >= MAX_LEVEL) {
-            log("당신은 최심부의 빛을 보았습니다. 승리! 🏆");
+          if (state.level === MAX_LEVEL) {
+            log("당신은 최심부에서 살아남아 탈출했습니다. 승리! 🏆");
             state.over = true;
             render();
             updateHUD();
@@ -1014,7 +1059,6 @@
             if (state.visible[it.y][it.x])
               drawGlyph(it.x, it.y, itemGlyph(it), itemColor(it));
           }
-          // draw traps only after revealed
           for (const t of state.traps) {
             if (t.seen && state.visible[t.y][t.x])
               drawGlyph(t.x, t.y, "^", COLORS.enemy);
@@ -1024,7 +1068,7 @@
               drawGlyph(
                 e.x,
                 e.y,
-                e.kind === "goblin" ? "g" : "s",
+                isBoss(e) ? "B" : e.kind === "goblin" ? "g" : "s",
                 COLORS.enemy
               );
           }

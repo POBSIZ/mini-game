@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>미식가 레시피 시너지 게임 v2</title>
+    <style>
+      :root {
+        --bg: #0f1020;
+        --panel: #17192f;
+        --accent: #8ef6ff;
+        --accent2: #ffd166;
+        --good: #4ade80;
+        --bad: #f87171;
+        --text: #e8eaf6;
+        --muted: #aab0d5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Pretendard", ui-sans-serif, system-ui, -apple-system,
+          Segoe UI, Roboto, Noto Sans KR, Apple SD Gothic Neo, sans-serif;
+        color: var(--text);
+        background: radial-gradient(
+          1200px 700px at 20% 10%,
+          #18203a 0%,
+          var(--bg) 55%
+        );
+        min-height: 100dvh;
+        overflow-x: hidden;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .story {
+        position: relative;
+        height: 64dvh;
+        border-radius: 20px;
+        background: radial-gradient(
+            800px 400px at 80% -10%,
+            rgba(255, 255, 255, 0.08),
+            transparent 60%
+          ),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.2));
+        overflow: hidden;
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+      }
+      .kitchen-bg {
+        position: absolute;
+        inset: 0;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop stop-color="%231a2140"/><stop offset="1" stop-color="%230f1020"/></linearGradient></defs><rect width="100%" height="100%" fill="url(%23g)"/><g opacity="0.18" stroke="%23a8b3ff" stroke-width="2" fill="none"><path d="M0 620 C 200 600, 400 580, 1200 620"/><path d="M-100 660 C 200 640, 500 630, 1300 660"/><path d="M-80 700 C 220 680, 520 690, 1280 720"/></g></svg>')
+          center/cover no-repeat;
+        filter: contrast(110%) saturate(110%);
+      }
+      .chef,
+      .critic {
+        position: absolute;
+        bottom: 20px;
+        width: 160px;
+        aspect-ratio: 1/1;
+        border-radius: 18px;
+        background: var(--panel);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 70px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      }
+      .chef {
+        left: 20px;
+        animation: floatY 3.5s ease-in-out infinite;
+      }
+      .critic {
+        right: -220px;
+        animation: arrive 3.2s 1.2s ease forwards,
+          floatY 4s 4.6s ease-in-out infinite;
+      }
+      @keyframes arrive {
+        to {
+          right: 20px;
+        }
+      }
+      @keyframes floatY {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
+      }
+      .title {
+        position: absolute;
+        left: 24px;
+        top: 24px;
+        font-size: 28px;
+        letter-spacing: 0.3px;
+        color: var(--accent);
+        text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+      }
+      .speech {
+        position: absolute;
+        right: 220px;
+        bottom: 140px;
+        max-width: 420px;
+        padding: 14px 16px;
+        background: #1f2342;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+        opacity: 0;
+        transform: translateY(10px);
+        animation: popIn 0.9s 2.2s ease forwards;
+      }
+      .speech:after {
+        content: "";
+        position: absolute;
+        right: -10px;
+        bottom: 18px;
+        width: 0;
+        height: 0;
+        border-left: 10px solid #1f2342;
+        border-top: 10px solid transparent;
+        border-bottom: 10px solid transparent;
+      }
+      @keyframes popIn {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .start-panel {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        position: absolute;
+        left: 24px;
+        bottom: 24px;
+      }
+      .btn {
+        appearance: none;
+        border: none;
+        cursor: pointer;
+        padding: 12px 18px;
+        border-radius: 12px;
+        background: linear-gradient(180deg, #2a2f55, #1b1f3d);
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+          0 8px 20px rgba(0, 0, 0, 0.35);
+        transition: transform 0.08s ease, box-shadow 0.2s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18),
+          0 12px 24px rgba(0, 0, 0, 0.35);
+      }
+      .btn:active {
+        transform: translateY(1px) scale(0.99);
+      }
+      .btn.primary {
+        background: linear-gradient(180deg, #2f9dfd, #1863db);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22),
+          0 10px 24px rgba(35, 134, 255, 0.35);
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .hud {
+        display: none;
+        margin-top: 18px;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .timer {
+        flex: 1;
+        background: #121431;
+        border-radius: 999px;
+        height: 14px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+      .timer > i {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, var(--accent), #5ef7b8);
+        border-radius: inherit;
+        transition: width 0.2s linear;
+      }
+      .status {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .badge {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #1a1d3e;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 13px;
+      }
+      .game {
+        display: none;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 16px;
+        margin-top: 14px;
+      }
+      .panel {
+        background: linear-gradient(180deg, #1d2143, #141632);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 14px;
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+      }
+      .panel h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+        color: var(--accent2);
+        letter-spacing: 0.2px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .card {
+        position: relative;
+        background: #202552;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 10px;
+        cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s;
+        min-height: 84px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+      }
+      .card.selected {
+        outline: 2px solid var(--accent);
+        border-color: transparent;
+        box-shadow: 0 0 0 6px rgba(142, 246, 255, 0.12);
+      }
+      .icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: #121431;
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+      }
+      .name {
+        font-weight: 700;
+      }
+      .tags {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+      .tag {
+        font-size: 11px;
+        padding: 4px 6px;
+        background: #15183a;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 999px;
+        color: #c8cff7;
+      }
+      .stock {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        font-size: 11px;
+        color: #9aa3dd;
+      }
+      .plate {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        min-height: 88px;
+      }
+      .chip {
+        background: #1b1f46;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .chip i {
+        font-style: normal;
+        font-size: 18px;
+      }
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+      }
+      .synergy-log {
+        background: #121431;
+        border-radius: 12px;
+        padding: 10px;
+        height: 140px;
+        overflow: auto;
+        font-size: 13px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .synergy-log b {
+        color: var(--accent);
+      }
+      .score {
+        font-size: 32px;
+        font-weight: 900;
+        letter-spacing: 0.4px;
+        color: #cbe9ff;
+        text-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      }
+      .result {
+        display: none;
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: 16px;
+        background: #141632;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .result.success {
+        border-color: rgba(74, 222, 128, 0.35);
+        box-shadow: 0 0 0 6px rgba(74, 222, 128, 0.12) inset;
+      }
+      .result.fail {
+        border-color: rgba(248, 113, 113, 0.35);
+        box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.12) inset;
+      }
+      .result h3 {
+        margin: 0 0 6px;
+      }
+      .plate-anim {
+        position: relative;
+        height: 120px;
+        margin-top: 10px;
+      }
+      .plate-anim .dish {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 40% 30%,
+          #ffffff,
+          #d9e8ff 45%,
+          #9ab6ff 46%,
+          #8aa7ff 48%,
+          #313a74 52%,
+          #161a3b 53%
+        );
+        transform: translate(-50%, -50%);
+        box-shadow: 0 40px 50px rgba(0, 0, 0, 0.35);
+      }
+      .spark {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent2);
+        opacity: 0;
+      }
+      .confetti {
+        position: absolute;
+        width: 8px;
+        height: 14px;
+        transform: rotate(15deg);
+        opacity: 0;
+      }
+      .shake {
+        animation: shake 0.5s ease;
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-8px);
+        }
+        40% {
+          transform: translateX(8px);
+        }
+        60% {
+          transform: translateX(-5px);
+        }
+        80% {
+          transform: translateX(5px);
+        }
+      }
+      .footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+      @media (max-width: 920px) {
+        .game {
+          grid-template-columns: 1fr;
+        }
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .story {
+          height: 58dvh;
+        }
+        .speech {
+          right: 180px;
+          max-width: 360px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="story" id="story">
+        <div class="kitchen-bg"></div>
+        <div class="title">오늘의 미션: <b>미식가를 만족시켜라!</b></div>
+        <div class="chef" aria-label="쉐프">👨‍🍳</div>
+        <div class="critic" aria-label="미식가">🧑‍⚖️</div>
+        <div class="speech">
+          <b>미식가</b>: "소문을 듣고 왔소. <u>제한된 식재료</u>와
+          <u>한정된 시간</u>으로 나를 감동시킬 한 접시를 보여주시오!<br />
+          점수는 <b>식재료들의 시너지</b>로 평가하겠소. 기준점수 이상이면 통과!"
+        </div>
+        <div class="start-panel">
+          <button class="btn primary" id="startBtn">게임 시작</button>
+          <span class="hint"
+            >재료 5개를 골라 최고의 시너지를 만들자. 제한 시간 60초.</span
+          >
+        </div>
+      </div>
+
+      <div class="hud" id="hud">
+        <div class="status">
+          <span class="badge"
+            >오늘의 미식가 취향: <b id="palateBadge">—</b></span
+          >
+          <span class="badge">선택: <b id="pickCount">0</b>/5</span>
+        </div>
+        <div class="timer" aria-label="남은 시간"><i id="timeBar"></i></div>
+      </div>
+
+      <div class="game" id="game">
+        <section class="panel">
+          <h2>식당 창고 (클릭하여 담기)</h2>
+          <div class="grid" id="pantry"></div>
+        </section>
+        <section class="panel">
+          <h2>당신의 접시</h2>
+          <div class="plate" id="plate"></div>
+          <div class="actions">
+            <div class="score" id="score">점수: 0</div>
+            <div>
+              <button class="btn" id="hintBtn">시너지 힌트</button>
+              <button class="btn primary" id="serveBtn">내놓기</button>
+            </div>
+          </div>
+          <div class="synergy-log" id="log" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <div class="result" id="result">
+        <h3 id="resultTitle">결과</h3>
+        <div id="resultMsg"></div>
+        <div class="plate-anim" id="plateAnim"><div class="dish"></div></div>
+        <div style="display: flex; gap: 8px; margin-top: 10px">
+          <button class="btn" id="retry">다시 도전</button>
+          <button class="btn" id="showRules">시너지 규칙 보기</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        © 2025 미식가 레시피 시너지 게임 v2 — 재료 5개 조합 + 음식 이름 자동
+        생성
+      </div>
+    </div>
+
+    <script>
+      // --- 데이터: 재료와 태그 ---
+      const INGREDIENTS = [
+        {
+          id: "beef",
+          name: "소고기",
+          icon: "🥩",
+          stock: 2,
+          tags: ["단백질", "우마미"],
+        },
+        {
+          id: "pork",
+          name: "돼지고기",
+          icon: "🍖",
+          stock: 2,
+          tags: ["단백질", "진한"],
+        },
+        {
+          id: "chicken",
+          name: "닭고기",
+          icon: "🍗",
+          stock: 2,
+          tags: ["단백질", "담백"],
+        },
+        {
+          id: "fish",
+          name: "흰살생선",
+          icon: "🐟",
+          stock: 2,
+          tags: ["단백질", "신선"],
+        },
+        {
+          id: "shrimp",
+          name: "새우",
+          icon: "🦐",
+          stock: 2,
+          tags: ["단백질", "바다", "우마미"],
+        },
+        {
+          id: "tofu",
+          name: "두부",
+          icon: "🧊",
+          stock: 3,
+          tags: ["식물성", "담백"],
+        },
+        {
+          id: "tomato",
+          name: "토마토",
+          icon: "🍅",
+          stock: 3,
+          tags: ["산미", "감칠", "신선"],
+        },
+        {
+          id: "basil",
+          name: "바질",
+          icon: "🌿",
+          stock: 2,
+          tags: ["허브", "향"],
+        },
+        {
+          id: "garlic",
+          name: "마늘",
+          icon: "🧄",
+          stock: 3,
+          tags: ["향", "우마미"],
+        },
+        {
+          id: "onion",
+          name: "양파",
+          icon: "🧅",
+          stock: 3,
+          tags: ["향", "단맛"],
+        },
+        {
+          id: "chili",
+          name: "고추",
+          icon: "🌶️",
+          stock: 3,
+          tags: ["매운", "향"],
+        },
+        {
+          id: "ginger",
+          name: "생강",
+          icon: "🫚",
+          stock: 2,
+          tags: ["향", "따뜻"],
+        },
+        {
+          id: "miso",
+          name: "된장",
+          icon: "🫘",
+          stock: 2,
+          tags: ["발효", "우마미"],
+        },
+        {
+          id: "soy",
+          name: "간장",
+          icon: "🥣",
+          stock: 2,
+          tags: ["발효", "짠맛", "우마미"],
+        },
+        {
+          id: "butter",
+          name: "버터",
+          icon: "🧈",
+          stock: 2,
+          tags: ["지방", "고소"],
+        },
+        {
+          id: "cream",
+          name: "생크림",
+          icon: "🥛",
+          stock: 2,
+          tags: ["지방", "부드러움"],
+        },
+        {
+          id: "lemon",
+          name: "레몬",
+          icon: "🍋",
+          stock: 2,
+          tags: ["산미", "상큼"],
+        },
+        {
+          id: "rice",
+          name: "쌀",
+          icon: "🍚",
+          stock: 3,
+          tags: ["탄수", "담백"],
+        },
+        {
+          id: "pasta",
+          name: "파스타",
+          icon: "🍝",
+          stock: 2,
+          tags: ["탄수", "담백"],
+        },
+        {
+          id: "potato",
+          name: "감자",
+          icon: "🥔",
+          stock: 2,
+          tags: ["탄수", "포만"],
+        },
+        {
+          id: "olive",
+          name: "올리브오일",
+          icon: "🫒",
+          stock: 2,
+          tags: ["지방", "향"],
+        },
+        {
+          id: "cheese",
+          name: "치즈",
+          icon: "🧀",
+          stock: 2,
+          tags: ["지방", "우마미"],
+        },
+        {
+          id: "mush",
+          name: "버섯",
+          icon: "🍄",
+          stock: 3,
+          tags: ["우마미", "숲향"],
+        },
+        {
+          id: "seaweed",
+          name: "김",
+          icon: "🟩",
+          stock: 2,
+          tags: ["바다", "우마미"],
+        },
+      ];
+
+      // 미식가 취향 (가중치)
+      const PALATES = [
+        {
+          id: "spicy",
+          name: "매운맛",
+          likes: ["매운", "향"],
+          hates: ["부드러움"],
+        },
+        {
+          id: "umami",
+          name: "우마미",
+          likes: ["우마미", "발효"],
+          hates: ["상큼"],
+        },
+        {
+          id: "fresh",
+          name: "상큼/신선",
+          likes: ["신선", "산미", "상큼"],
+          hates: ["진한"],
+        },
+        {
+          id: "rich",
+          name: "진하고 고소",
+          likes: ["지방", "고소"],
+          hates: ["상큼"],
+        },
+      ];
+
+      // 시너지 규칙
+      const SYNERGY = {
+        pairs: {
+          "토마토+바질": 9,
+          "토마토+올리브오일": 7,
+          "마늘+올리브오일": 6,
+          "버섯+버터": 8,
+          "소고기+버터": 6,
+          "흰살생선+레몬": 8,
+          "새우+마늘": 7,
+          "간장+버터": 7,
+          "된장+마늘": 6,
+          "치즈+파스타": 8,
+          "쌀+김": 6,
+          "감자+버터": 7,
+          "양파+버터": 5,
+        },
+        trios: {
+          "토마토+바질+올리브오일": 14,
+          "버섯+버터+마늘": 12,
+          "간장+버터+마늘": 12,
+          "흰살생선+레몬+버터": 13,
+          "치즈+파스타+마늘": 12,
+        },
+      };
+
+      const BASE_POINTS = 5; // 각 재료 기본점수
+      const MAX_PICK = 5; // ✅ 다섯 개 조합
+      const TIME_LIMIT = 60; // seconds
+
+      // --- 상태 ---
+      let pantryState = JSON.parse(JSON.stringify(INGREDIENTS));
+      let plate = [];
+      let timeLeft = TIME_LIMIT;
+      let timer;
+      let palate; // 오늘의 취향
+      let threshold = 46; // 통과 기준 (동적)
+
+      // --- 초기화 & 스토리에서 게임으로 ---
+      const startBtn = document.getElementById("startBtn");
+      const storyEl = document.getElementById("story");
+      const hud = document.getElementById("hud");
+      const game = document.getElementById("game");
+      const pantryEl = document.getElementById("pantry");
+      const plateEl = document.getElementById("plate");
+      const logEl = document.getElementById("log");
+      const scoreEl = document.getElementById("score");
+      const serveBtn = document.getElementById("serveBtn");
+      const hintBtn = document.getElementById("hintBtn");
+      const timeBar = document.getElementById("timeBar");
+      const pickCount = document.getElementById("pickCount");
+      const palateBadge = document.getElementById("palateBadge");
+      const resultEl = document.getElementById("result");
+      const resultTitle = document.getElementById("resultTitle");
+      const resultMsg = document.getElementById("resultMsg");
+      const retryBtn = document.getElementById("retry");
+      const showRulesBtn = document.getElementById("showRules");
+
+      function setup() {
+        // 랜덤 취향
+        palate = PALATES[Math.floor(Math.random() * PALATES.length)];
+        palateBadge.textContent = palate.name;
+        // 기준점수(취향에 따라 약간 변동)
+        threshold = 46 + Math.floor(Math.random() * 9); // 46~54 (5픽 기준)
+
+        // 그리드 그리기
+        renderPantry();
+        renderPlate();
+        updateScore();
+        logEl.innerHTML = "시너지 로그가 여기에 표시됩니다. 🧪";
+
+        // 타이머 시작
+        timeLeft = TIME_LIMIT;
+        updateTimeBar();
+        timer = setInterval(() => {
+          timeLeft--;
+          updateTimeBar();
+          if (timeLeft <= 0) {
+            clearInterval(timer);
+            serve();
+          }
+        }, 1000);
+      }
+
+      function updateTimeBar() {
+        const pct = Math.max(0, Math.min(100, (timeLeft / TIME_LIMIT) * 100));
+        timeBar.style.width = pct + "%";
+        timeBar.style.background =
+          pct < 30
+            ? `linear-gradient(90deg, var(--bad), #ff9a8a)`
+            : `linear-gradient(90deg, var(--accent), #5ef7b8)`;
+      }
+
+      startBtn.addEventListener("click", () => {
+        storyEl.classList.add("fadeOut");
+        storyEl.style.transition = "transform .6s ease, opacity .6s ease";
+        storyEl.style.opacity = "0";
+        storyEl.style.transform = "translateY(-8px) scale(.99)";
+        setTimeout(() => {
+          storyEl.style.display = "none";
+          hud.style.display = "flex";
+          game.style.display = "grid";
+          setup();
+        }, 620);
+      });
+
+      // --- 렌더링 ---
+      function renderPantry() {
+        pantryEl.innerHTML = "";
+        pantryState.forEach((ing) => {
+          const el = document.createElement("button");
+          el.className = "card";
+          el.setAttribute("type", "button");
+          el.dataset.id = ing.id;
+          el.innerHTML = `
+      <div class="icon">${ing.icon}</div>
+      <div>
+        <div class="name">${ing.name}</div>
+        <div class="tags">${ing.tags
+          .map((t) => `<span class="tag">${t}</span>`)
+          .join("")}</div>
+      </div>
+      <div class="stock">재고: ${ing.stock}</div>
+    `;
+          if (ing.stock <= 0) {
+            el.style.opacity = ".45";
+            el.style.pointerEvents = "none";
+          }
+          el.addEventListener("click", () => pick(ing.id));
+          pantryEl.appendChild(el);
+        });
+      }
+
+      function renderPlate() {
+        plateEl.innerHTML = "";
+        plate.forEach((it) => {
+          const el = document.createElement("div");
+          el.className = "chip";
+          el.innerHTML = `<i>${it.icon}</i>${it.name}`;
+          plateEl.appendChild(el);
+        });
+        pickCount.textContent = plate.length + "";
+      }
+
+      // --- 선택 로직 ---
+      function pick(id) {
+        if (plate.length >= MAX_PICK) {
+          bounce(hud);
+          return;
+        }
+        const ing = pantryState.find((x) => x.id === id);
+        if (!ing || ing.stock <= 0) return;
+        ing.stock--;
+        plate.push(ing);
+        renderPantry();
+        renderPlate();
+        updateScore(true);
+      }
+
+      // --- 점수 계산 ---
+      function updateScore(log = false) {
+        const names = plate.map((p) => p.name);
+        let score = plate.length * BASE_POINTS; // 기본 점수
+        let notes = [];
+
+        // 태그 기반 가중치 (취향)
+        plate.forEach((p) => {
+          p.tags.forEach((t) => {
+            if (palate.likes.includes(t)) score += 3;
+            if (palate.hates.includes(t)) score -= 2;
+          });
+        });
+
+        // 페어 시너지
+        for (let i = 0; i < names.length; i++) {
+          for (let j = i + 1; j < names.length; j++) {
+            const pair1 = `${names[i]}+${names[j]}`;
+            const pair2 = `${names[j]}+${names[i]}`;
+            const val = SYNERGY.pairs[pair1] ?? SYNERGY.pairs[pair2];
+            if (val) {
+              score += val;
+              if (log)
+                notes.push(
+                  `<b>페어</b> ${pair1.replace("+", " + ")} = +${val}`
+                );
+            }
+          }
+        }
+        // 트리오 시너지
+        if (names.length >= 3) {
+          const combos = combosOf(names, 3);
+          combos.forEach((c) => {
+            const key = c.join("+");
+            if (SYNERGY.trios[key]) {
+              score += SYNERGY.trios[key];
+              if (log)
+                notes.push(
+                  `<b>트리오</b> ${c.join(" + ")} = +${SYNERGY.trios[key]}`
+                );
+            }
+          });
+        }
+
+        // 다양성 보너스
+        const uniqueTags = new Set(plate.flatMap((p) => p.tags));
+        score += Math.max(0, uniqueTags.size - 3);
+
+        // 너무 무거운 맛 패널티
+        const fat = plate.filter((p) => p.tags.includes("지방")).length;
+        const prot = plate.filter(
+          (p) => p.tags.includes("단백질") || p.tags.includes("식물성")
+        ).length;
+        if (fat >= 2 && prot >= 2) score -= 4;
+
+        scoreEl.textContent = `점수: ${score}`;
+        if (log) {
+          logEl.innerHTML = notes.length
+            ? notes.map((n) => `• ${n}`).join("<br>")
+            : "아직 시너지가 충분하지 않아요. 조합을 노려보세요!";
+        }
+        return score;
+      }
+
+      function combosOf(arr, k) {
+        const res = [];
+        (function dfs(start, path) {
+          if (path.length === k) {
+            res.push([...path]);
+            return;
+          }
+          for (let i = start; i < arr.length; i++) {
+            path.push(arr[i]);
+            dfs(i + 1, path);
+            path.pop();
+          }
+        })(0, []);
+        return res;
+      }
+
+      // --- 액션 ---
+      function generateDishName(plate, palate) {
+        const has = (n) => plate.some((p) => p.name === n);
+        const tag = (t) => plate.some((p) => p.tags.includes(t));
+        if (has("토마토") && has("바질") && has("올리브오일")) {
+          if (has("파스타")) return "카프레제 파스타";
+          return "카프레제 스타일 샐러드";
+        }
+        if (has("버섯") && has("버터") && has("마늘")) {
+          if (has("쌀")) return "갈릭버터 머쉬룸 리소토";
+          return "갈릭버터 머쉬룸 소테";
+        }
+        if (has("흰살생선") && has("레몬") && has("버터"))
+          return "레몬버터 화이트피시";
+        if (has("간장") && has("버터") && has("마늘")) {
+          if (has("쌀")) return "갓버마 버터간장 덮밥";
+          return "버터간장 갈릭 글레이즈";
+        }
+        if (has("치즈") && has("파스타")) {
+          if (has("마늘")) return "치즈 알리오 파스타";
+          return "포르마지오 파스타";
+        }
+        if (has("새우") && has("마늘") && has("파스타"))
+          return "감베리 아글리오 올리오";
+        if (has("소고기") && has("버터") && has("감자"))
+          return "버터 스테이크 & 매쉬";
+        if (has("쌀") && has("김")) return "우마미 김덮밥";
+        const base = [
+          tag("바다") ? "오션" : "셰프",
+          tag("지방") ? "리치" : "라이트",
+          tag("산미") ? "시트러스" : "하모니",
+        ];
+        let name = base.filter(Boolean).slice(0, 2).join(" ");
+        const cat = has("파스타")
+          ? "파스타"
+          : has("쌀")
+          ? "라이스"
+          : has("소고기")
+          ? "스테이크"
+          : has("흰살생선")
+          ? "피시"
+          : "플레이트";
+        if (!name) name = palate.name;
+        return `${name} ${cat}`;
+      }
+
+      serveBtn.addEventListener("click", serve);
+      function serve() {
+        clearInterval(timer);
+        const score = updateScore(false);
+        const ok = score >= threshold;
+        const dishName = generateDishName(plate, palate);
+        resultEl.style.display = "block";
+        resultEl.className = "result " + (ok ? "success" : "fail");
+        resultTitle.textContent = ok
+          ? `통과! ${dishName} ✨`
+          : `아쉽습니다… ${dishName}`;
+        resultMsg.innerHTML = `최종 점수 <b>${score}</b> / 기준점수 <b>${threshold}</b> — 취향: <b>${palate.name}</b>`;
+        animatePlate(ok);
+      }
+
+      retryBtn.addEventListener("click", () => {
+        pantryState = JSON.parse(JSON.stringify(INGREDIENTS));
+        plate = [];
+        resultEl.style.display = "none";
+        hud.classList.remove("shake");
+        hud.style.display = "flex";
+        game.style.display = "grid";
+        setup();
+      });
+
+      hintBtn.addEventListener("click", () => {
+        const tips = [
+          "이탈리안 향: 토마토 + 바질 + 올리브오일",
+          "버섯 풍미: 버섯 + 버터 (+ 마늘)",
+          "해산물 기본: 흰살생선 + 레몬 (+ 버터)",
+          "감칠 폭탄: 간장 + 버터 + 마늘",
+          "든든한 메인: 치즈 + 파스타 (+ 마늘)",
+        ];
+        logEl.innerHTML = "💡 " + tips[Math.floor(Math.random() * tips.length)];
+      });
+
+      function bounce(el) {
+        el.classList.add("shake");
+        setTimeout(() => el.classList.remove("shake"), 520);
+      }
+
+      // --- 연출 ---
+      function animatePlate(success) {
+        const area = document.getElementById("plateAnim");
+        area.innerHTML = '<div class="dish"></div>';
+        if (success) {
+          confetti(area, 36);
+        } else {
+          spark(area, 14);
+        }
+      }
+      function spark(area, n) {
+        for (let i = 0; i < n; i++) {
+          const s = document.createElement("div");
+          s.className = "spark";
+          const x = 60 + Math.random() * 80;
+          const y = 20 + Math.random() * 80;
+          s.style.left = x + "px";
+          s.style.top = y + "px";
+          s.style.opacity = 0;
+          area.appendChild(s);
+          const delay = i * 20;
+          setTimeout(() => {
+            s.animate(
+              [
+                { transform: "translate(70px,60px) scale(.4)", opacity: 0 },
+                {
+                  transform: `translate(${Math.random() * 160 - 80}px, ${
+                    Math.random() * 60 - 30
+                  }px) scale(1.2)`,
+                  opacity: 1,
+                  offset: 0.4,
+                },
+                {
+                  transform: `translate(${Math.random() * 220 - 110}px, ${
+                    Math.random() * 120 - 60
+                  }px) scale(.6)`,
+                  opacity: 0,
+                },
+              ],
+              {
+                duration: 700 + Math.random() * 400,
+                easing: "ease-out",
+                fill: "forwards",
+              }
+            );
+          }, delay);
+        }
+      }
+      function confetti(area, n) {
+        for (let i = 0; i < n; i++) {
+          const c = document.createElement("div");
+          c.className = "confetti";
+          c.style.background = `hsl(${Math.floor(
+            Math.random() * 360
+          )}, 90%, 60%)`;
+          c.style.left = 60 + Math.random() * 80 + "px";
+          c.style.top = 40 + Math.random() * 20 + "px";
+          c.style.opacity = 0.9;
+          area.appendChild(c);
+          const dx = (Math.random() * 2 - 1) * 140;
+          const dy = 160 + Math.random() * 80;
+          c.animate(
+            [
+              { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+              {
+                transform: `translate(${dx / 2}px, ${dy / 2}px) rotate(180deg)`,
+                opacity: 0.9,
+              },
+              {
+                transform: `translate(${dx}px, ${dy}px) rotate(360deg)`,
+                opacity: 0,
+              },
+            ],
+            {
+              duration: 1200 + Math.random() * 600,
+              easing: "cubic-bezier(.22,.61,.36,1)",
+            }
+          );
+        }
+      }
+
+      // --- 규칙 보기 ---
+      showRulesBtn.addEventListener("click", () => {
+        const pairList = Object.entries(SYNERGY.pairs)
+          .map(([k, v]) => `• ${k.replace("+", " + ")} = +${v}`)
+          .join("\n");
+        const trioList = Object.entries(SYNERGY.trios)
+          .map(([k, v]) => `• ${k.replaceAll("+", " + ")} = +${v}`)
+          .join("\n");
+        alert(
+          `[시너지 규칙]
+- 각 재료 기본점수: ${BASE_POINTS}
+- 취향 보너스: 미식가가 좋아하는 태그 +3, 싫어하는 태그 -2
+- 페어/트리오: 아래 조합 보너스 적용
+\n[페어]\n${pairList}\n\n[트리오]\n${trioList}\n\n보너스: 태그 다양성 + (고기+지방 과하면 -4)\n- 최대 선택: ${MAX_PICK}`
+        );
+      });
+    </script>
+  </body>
+</html>

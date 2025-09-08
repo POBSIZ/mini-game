@@ -76,8 +76,18 @@ pub async fn create_room(
             eprintln!("❌ ROOM_CREATED 메시지 전송 실패: {}", e);
         }
 
-        // 방장에게 방 생성 완료 알림 (브로드캐스트)
+        // 방장에게 ROOM_JOINED 메시지도 개별 전송 (플레이어 목록 업데이트용)
         let players_json = crate::types::collect_players(&inner);
+        let join_msg = ServerMsg::RoomJoined {
+            room_id: room_id.clone(),
+            room_name: inner.name.clone(),
+            players: players_json.clone(),
+        };
+        if let Err(e) = tx.send(join_msg.wrap()).await {
+            eprintln!("❌ ROOM_JOINED 메시지 전송 실패: {}", e);
+        }
+
+        // 다른 플레이어들에게 브로드캐스트 (현재는 방장만 있으므로 의미없지만 일관성을 위해)
         room.tx
             .send(ServerMsg::RoomJoined {
                 room_id: room_id.clone(),
