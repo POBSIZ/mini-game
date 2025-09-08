@@ -498,174 +498,178 @@
     </div>
 
     <script>
+      const BASE_POINTS = 3; // 각 재료 기본점수
+      const MAX_PICK = 5; // ✅ 다섯 개 조합
+      const TIME_LIMIT = 15; // seconds
+
       // --- 데이터: 재료와 태그 ---
       const INGREDIENTS = [
         {
           id: "beef",
           name: "소고기",
           icon: "🥩",
-          stock: 2,
+          stock: 1,
           tags: ["단백질", "우마미"],
         },
         {
           id: "pork",
           name: "돼지고기",
           icon: "🍖",
-          stock: 2,
+          stock: 1,
           tags: ["단백질", "진한"],
         },
         {
           id: "chicken",
           name: "닭고기",
           icon: "🍗",
-          stock: 2,
+          stock: 1,
           tags: ["단백질", "담백"],
         },
         {
           id: "fish",
           name: "흰살생선",
           icon: "🐟",
-          stock: 2,
+          stock: 1,
           tags: ["단백질", "신선"],
         },
         {
           id: "shrimp",
           name: "새우",
           icon: "🦐",
-          stock: 2,
+          stock: 1,
           tags: ["단백질", "바다", "우마미"],
         },
         {
           id: "tofu",
           name: "두부",
           icon: "🧊",
-          stock: 3,
+          stock: 1,
           tags: ["식물성", "담백"],
         },
         {
           id: "tomato",
           name: "토마토",
           icon: "🍅",
-          stock: 3,
+          stock: 1,
           tags: ["산미", "감칠", "신선"],
         },
         {
           id: "basil",
           name: "바질",
           icon: "🌿",
-          stock: 2,
+          stock: 1,
           tags: ["허브", "향"],
         },
         {
           id: "garlic",
           name: "마늘",
           icon: "🧄",
-          stock: 3,
+          stock: 1,
           tags: ["향", "우마미"],
         },
         {
           id: "onion",
           name: "양파",
           icon: "🧅",
-          stock: 3,
+          stock: 1,
           tags: ["향", "단맛"],
         },
         {
           id: "chili",
           name: "고추",
           icon: "🌶️",
-          stock: 3,
+          stock: 1,
           tags: ["매운", "향"],
         },
         {
           id: "ginger",
           name: "생강",
           icon: "🫚",
-          stock: 2,
+          stock: 1,
           tags: ["향", "따뜻"],
         },
         {
           id: "miso",
           name: "된장",
           icon: "🫘",
-          stock: 2,
+          stock: 1,
           tags: ["발효", "우마미"],
         },
         {
           id: "soy",
           name: "간장",
           icon: "🥣",
-          stock: 2,
+          stock: 1,
           tags: ["발효", "짠맛", "우마미"],
         },
         {
           id: "butter",
           name: "버터",
           icon: "🧈",
-          stock: 2,
+          stock: 1,
           tags: ["지방", "고소"],
         },
         {
           id: "cream",
           name: "생크림",
           icon: "🥛",
-          stock: 2,
+          stock: 1,
           tags: ["지방", "부드러움"],
         },
         {
           id: "lemon",
           name: "레몬",
           icon: "🍋",
-          stock: 2,
+          stock: 1,
           tags: ["산미", "상큼"],
         },
         {
           id: "rice",
           name: "쌀",
           icon: "🍚",
-          stock: 3,
+          stock: 1,
           tags: ["탄수", "담백"],
         },
         {
           id: "pasta",
           name: "파스타",
           icon: "🍝",
-          stock: 2,
+          stock: 1,
           tags: ["탄수", "담백"],
         },
         {
           id: "potato",
           name: "감자",
           icon: "🥔",
-          stock: 2,
+          stock: 1,
           tags: ["탄수", "포만"],
         },
         {
           id: "olive",
           name: "올리브오일",
           icon: "🫒",
-          stock: 2,
+          stock: 1,
           tags: ["지방", "향"],
         },
         {
           id: "cheese",
           name: "치즈",
           icon: "🧀",
-          stock: 2,
+          stock: 1,
           tags: ["지방", "우마미"],
         },
         {
           id: "mush",
           name: "버섯",
           icon: "🍄",
-          stock: 3,
+          stock: 1,
           tags: ["우마미", "숲향"],
         },
         {
           id: "seaweed",
           name: "김",
           icon: "🟩",
-          stock: 2,
+          stock: 1,
           tags: ["바다", "우마미"],
         },
       ];
@@ -701,32 +705,29 @@
       // 시너지 규칙
       const SYNERGY = {
         pairs: {
-          "토마토+바질": 9,
-          "토마토+올리브오일": 7,
-          "마늘+올리브오일": 6,
-          "버섯+버터": 8,
-          "소고기+버터": 6,
+          "토마토+바질": 9 - Math.floor(Math.random() * 9),
+          "토마토+올리브오일": 7 - Math.floor(Math.random() * 9),
+          "마늘+올리브오일": 6 - Math.floor(Math.random() * 9),
+          "버섯+버터": 8 - Math.floor(Math.random() * 9),
+          "소고기+버터": 6 - Math.floor(Math.random() * 9),
           "흰살생선+레몬": 8,
-          "새우+마늘": 7,
-          "간장+버터": 7,
-          "된장+마늘": 6,
-          "치즈+파스타": 8,
-          "쌀+김": 6,
-          "감자+버터": 7,
-          "양파+버터": 5,
+          "새우+마늘": 7 - Math.floor(Math.random() * 9),
+          "간장+버터": 7 - Math.floor(Math.random() * 9),
+          "된장+마늘": 6 - Math.floor(Math.random() * 9),
+          "치즈+파스타": 8 - Math.floor(Math.random() * 9),
+          "쌀+김": 6 - Math.floor(Math.random() * 9),
+          "감자+버터": 7 - Math.floor(Math.random() * 9),
+          "양파+버터": 5 - Math.floor(Math.random() * 9),
+          "고추+버터": 5 - Math.floor(Math.random() * 9),
         },
         trios: {
-          "토마토+바질+올리브오일": 14,
-          "버섯+버터+마늘": 12,
-          "간장+버터+마늘": 12,
-          "흰살생선+레몬+버터": 13,
-          "치즈+파스타+마늘": 12,
+          "토마토+바질+올리브오일": 14 - Math.floor(Math.random() * 9),
+          "버섯+버터+마늘": 12 - Math.floor(Math.random() * 9),
+          "간장+버터+마늘": 12 - Math.floor(Math.random() * 9),
+          "흰살생선+레몬+버터": 13 - Math.floor(Math.random() * 9),
+          "치즈+파스타+마늘": 12 - Math.floor(Math.random() * 9),
         },
       };
-
-      const BASE_POINTS = 5; // 각 재료 기본점수
-      const MAX_PICK = 5; // ✅ 다섯 개 조합
-      const TIME_LIMIT = 60; // seconds
 
       // --- 상태 ---
       let pantryState = JSON.parse(JSON.stringify(INGREDIENTS));
@@ -734,7 +735,7 @@
       let timeLeft = TIME_LIMIT;
       let timer;
       let palate; // 오늘의 취향
-      let threshold = 46; // 통과 기준 (동적)
+      let threshold = 36; // 통과 기준 (동적)
 
       // --- 초기화 & 스토리에서 게임으로 ---
       const startBtn = document.getElementById("startBtn");
@@ -761,7 +762,7 @@
         palate = PALATES[Math.floor(Math.random() * PALATES.length)];
         palateBadge.textContent = palate.name;
         // 기준점수(취향에 따라 약간 변동)
-        threshold = 46 + Math.floor(Math.random() * 9); // 46~54 (5픽 기준)
+        threshold += Math.floor(Math.random() * 9);
 
         // 그리드 그리기
         renderPantry();
@@ -880,9 +881,18 @@
             if (val) {
               score += val;
               if (log)
-                notes.push(
-                  `<b>페어</b> ${pair1.replace("+", " + ")} = +${val}`
-                );
+                if (val > 0) {
+                  notes.push(
+                    `<b>페어</b> ${pair1.replace("+", " + ")} = +${val}`
+                  );
+                } else {
+                  notes.push(
+                    `<b>페어 (신선도 하락)</b> ${pair1.replace(
+                      "+",
+                      " + "
+                    )} = ${val}`
+                  );
+                }
             }
           }
         }

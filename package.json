@@ -1,13 +1,11 @@
 {
   "dependencies": {
     "@playwright/test": "^1.55.0",
-    "playwright": "^1.55.0",
-    "ws": "^8.18.3"
+    "playwright": "^1.55.0"
   },
   "name": "mini-game",
   "description": "",
   "version": "1.0.0",
-  "main": "test-move-sync.js",
   "scripts": {
     "test": "node test-multiplayer-sync-fixed.js",
     "test:multiplayer": "node test-multiplayer-sync-fixed.js"
