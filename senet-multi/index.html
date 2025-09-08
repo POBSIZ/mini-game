@@ -5,309 +5,279 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>세넷 (Senet) · 멀티플레이어</title>
     <link rel="stylesheet" href="style.css" />
+    <script type="module" src="js/main.js"></script>
   </head>
   <body>
     <div id="app">
-      <div class="main-container">
-        <div class="welcome-section">
-          <h1>세넷 (Senet)</h1>
-          <p>고대 이집트의 전략 보드게임을 온라인에서 즐겨보세요</p>
-        </div>
-
-        <div class="game-options">
-          <div class="option-card" onclick="showCreateRoom()">
-            <h3>🆕 새 방 만들기</h3>
-            <p>새로운 게임 방을 생성하고 친구를 초대하세요</p>
+      <!-- 메인 메뉴 화면 -->
+      <div id="main-menu" class="screen active">
+        <div class="main-container">
+          <div class="welcome-section">
+            <h1>세넷 (Senet)</h1>
+            <p>고대 이집트의 전략 보드게임을 온라인에서 즐겨보세요</p>
           </div>
 
-          <div class="option-card" onclick="showJoinRoom()">
-            <h3>🔗 방 참가하기</h3>
-            <p>방 코드를 입력하여 기존 방에 참가하세요</p>
+          <div class="game-options">
+            <div class="option-card" onclick="showCreateRoom()">
+              <h3>🆕 새 방 만들기</h3>
+              <p>새로운 게임 방을 생성하고 친구를 초대하세요</p>
+            </div>
+
+            <div class="option-card" onclick="showJoinRoom()">
+              <h3>🔗 방 참가하기</h3>
+              <p>방 코드를 입력하여 기존 방에 참가하세요</p>
+            </div>
+
+            <div class="option-card" onclick="showPublicRooms()">
+              <h3>🌐 공개 방 보기</h3>
+              <p>다른 플레이어들이 만든 공개 방을 찾아보세요</p>
+            </div>
           </div>
 
-          <div class="option-card" onclick="showPublicRooms()">
-            <h3>🌐 공개 방 보기</h3>
-            <p>다른 플레이어들이 만든 공개 방을 찾아보세요</p>
+          <!-- 방 생성 섹션 -->
+          <div id="create-room-section" class="room-section hidden">
+            <h3>새 방 만들기</h3>
+            <form class="room-form" id="create-room-form">
+              <div class="form-group">
+                <label for="room-name">방 이름</label>
+                <input
+                  type="text"
+                  id="room-name"
+                  placeholder="예: 친구들과 세넷"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="player-name">플레이어 이름</label>
+                <input
+                  type="text"
+                  id="player-name"
+                  placeholder="당신의 이름"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="room-password">비밀번호 (선택사항)</label>
+                <input
+                  type="password"
+                  id="room-password"
+                  placeholder="비밀번호를 설정하려면 입력하세요"
+                />
+              </div>
+              <button type="submit" class="btn">방 만들기</button>
+            </form>
+          </div>
+
+          <!-- 방 참가 섹션 -->
+          <div id="join-room-section" class="room-section hidden">
+            <h3>방 참가하기</h3>
+            <form class="room-form" id="join-room-form">
+              <div class="form-group">
+                <label for="room-code">방 코드</label>
+                <input
+                  type="text"
+                  id="room-code"
+                  placeholder="예: ABC123"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="join-player-name">플레이어 이름</label>
+                <input
+                  type="text"
+                  id="join-player-name"
+                  placeholder="당신의 이름"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="join-room-password">비밀번호 (필요시)</label>
+                <input
+                  type="password"
+                  id="join-room-password"
+                  placeholder="방에 비밀번호가 있다면 입력하세요"
+                />
+              </div>
+              <button type="submit" class="btn">방 참가</button>
+            </form>
+          </div>
+
+          <!-- 공개 방 목록 섹션 -->
+          <div id="public-rooms-section" class="room-section hidden">
+            <h3>공개 방 목록</h3>
+            <div id="rooms-list" class="room-list">
+              <div class="loading">방 목록을 불러오는 중...</div>
+            </div>
+          </div>
+
+          <!-- 메시지 표시 영역 -->
+          <div id="message-area"></div>
+
+          <!-- 뒤로가기 버튼 -->
+          <div
+            id="back-section"
+            class="hidden"
+            style="text-align: center; margin-top: 20px"
+          >
+            <button id="back-btn" class="btn ghost">← 메인 메뉴로</button>
           </div>
         </div>
+      </div>
 
-        <!-- 방 생성 섹션 -->
-        <div id="create-room-section" class="room-section hidden">
-          <h3>새 방 만들기</h3>
-          <form class="room-form" id="create-room-form">
-            <div class="form-group">
-              <label for="room-name">방 이름</label>
-              <input
-                type="text"
-                id="room-name"
-                placeholder="예: 친구들과 세넷"
-                required
-              />
+      <!-- 대기실 화면 -->
+      <div id="waiting-room" class="screen">
+        <div class="waiting-container">
+          <header class="waiting-header">
+            <h1>게임 대기실</h1>
+            <div class="room-info">
+              <span id="room-name-display">방 이름</span>
+              <span id="room-code-display">방 코드: ABC123</span>
             </div>
-            <div class="form-group">
-              <label for="player-name">플레이어 이름</label>
-              <input
-                type="text"
-                id="player-name"
-                placeholder="당신의 이름"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label>
-                <input type="checkbox" id="is-public" checked />
-                공개 방으로 설정
-              </label>
-            </div>
-            <button type="submit" class="btn">방 만들기</button>
-          </form>
-        </div>
+          </header>
 
-        <!-- 방 참가 섹션 -->
-        <div id="join-room-section" class="room-section hidden">
-          <h3>방 참가하기</h3>
-          <form class="room-form" id="join-room-form">
-            <div class="form-group">
-              <label for="room-code">방 코드</label>
-              <input
-                type="text"
-                id="room-code"
-                placeholder="예: ABC123"
-                required
-              />
+          <div class="waiting-content">
+            <div class="players-section">
+              <h3>플레이어 목록</h3>
+              <div id="players-list" class="players-list">
+                <!-- 플레이어 목록이 여기에 동적으로 추가됩니다 -->
+              </div>
             </div>
-            <div class="form-group">
-              <label for="join-player-name">플레이어 이름</label>
-              <input
-                type="text"
-                id="join-player-name"
-                placeholder="당신의 이름"
-                required
-              />
-            </div>
-            <button type="submit" class="btn">방 참가</button>
-          </form>
-        </div>
 
-        <!-- 공개 방 목록 섹션 -->
-        <div id="public-rooms-section" class="room-section hidden">
-          <h3>공개 방 목록</h3>
-          <div id="rooms-list" class="room-list">
-            <div class="loading">방 목록을 불러오는 중...</div>
+            <div class="game-controls">
+              <div id="host-controls" class="host-controls">
+                <button id="start-game-btn" class="btn primary" disabled>
+                  게임 시작
+                </button>
+              </div>
+
+              <div id="player-controls" class="player-controls">
+                <button id="ready-btn" class="btn">준비 완료</button>
+                <button id="leave-room-btn" class="btn ghost">방 나가기</button>
+              </div>
+            </div>
+
+            <div class="chat-section">
+              <h3>채팅</h3>
+              <div id="chat-area" class="chat-messages">
+                <div class="chat-message system">
+                  <span class="timestamp">시스템</span>
+                  <span class="system-message">대기실에 입장했습니다.</span>
+                </div>
+              </div>
+              <div class="chat-input-container">
+                <input
+                  type="text"
+                  id="chat-input"
+                  placeholder="메시지를 입력하세요..."
+                />
+                <button id="send-chat-btn" class="btn">전송</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="waiting-footer">
+            <button id="btn-back-to-menu-from-waiting" class="btn ghost">
+              메인 메뉴로
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- 메시지 표시 영역 -->
-        <div id="message-area"></div>
+      <!-- 게임 화면 -->
+      <div id="game-screen" class="screen">
+        <header>
+          <div class="row">
+            <h1>세넷 (Senet)</h1>
+            <div class="pill">
+              <span class="turn-dot" id="turn-dot"></span
+              ><span id="turn-label"></span>
+            </div>
+          </div>
+          <div class="row">
+            <button id="btn-rules" class="btn ghost">규칙</button>
+            <button id="btn-reset" class="btn ghost">새 게임</button>
+            <button id="btn-back-to-menu" class="btn ghost">메뉴로</button>
+            <button id="btn-test-popup" class="btn ghost">팝업 테스트</button>
+          </div>
+        </header>
 
-        <!-- 뒤로가기 버튼 -->
-        <div
-          id="back-section"
-          class="hidden"
-          style="text-align: center; margin-top: 20px"
-        >
-          <button class="btn ghost" onclick="showMainMenu()">
-            ← 메인 메뉴로
-          </button>
+        <div class="wrap">
+          <section class="card">
+            <div class="row" style="align-items: center; gap: 12px">
+              <button id="roll" class="btn">막대기 던지기 (R)</button>
+              <div class="sticks" aria-live="polite" aria-atomic="true">
+                <div class="stick" id="s0"><div class="face">●</div></div>
+                <div class="stick" id="s1"><div class="face">●</div></div>
+                <div class="stick" id="s2"><div class="face">●</div></div>
+                <div class="stick" id="s3"><div class="face">●</div></div>
+              </div>
+              <div class="result" id="result">–</div>
+            </div>
+            <div id="status"></div>
+            <div style="font-size: 12px; color: var(--muted); margin-top: 6px">
+              특수칸: <b>15</b>·<b>26</b> 안전 / <b>27</b> 물(15→26 귀환) /
+              <b>30</b> 탈출
+            </div>
+          </section>
+
+          <section class="board card">
+            <div
+              id="board"
+              class="grid"
+              role="grid"
+              aria-label="세넷 보드"
+            ></div>
+          </section>
         </div>
       </div>
     </div>
 
-    <script>
-      // 메인 메뉴 표시
-      function showMainMenu() {
-        document.querySelector(".game-options").classList.remove("hidden");
-        document.getElementById("create-room-section").classList.add("hidden");
-        document.getElementById("join-room-section").classList.add("hidden");
-        document.getElementById("public-rooms-section").classList.add("hidden");
-        document.getElementById("back-section").classList.add("hidden");
-        clearMessages();
-      }
-
-      // 방 생성 화면 표시
-      function showCreateRoom() {
-        document.querySelector(".game-options").classList.add("hidden");
-        document
-          .getElementById("create-room-section")
-          .classList.remove("hidden");
-        document.getElementById("back-section").classList.remove("hidden");
-        clearMessages();
-      }
-
-      // 방 참가 화면 표시
-      function showJoinRoom() {
-        document.querySelector(".game-options").classList.add("hidden");
-        document.getElementById("join-room-section").classList.remove("hidden");
-        document.getElementById("back-section").classList.remove("hidden");
-        clearMessages();
-      }
-
-      // 공개 방 목록 표시
-      function showPublicRooms() {
-        document.querySelector(".game-options").classList.add("hidden");
-        document
-          .getElementById("public-rooms-section")
-          .classList.remove("hidden");
-        document.getElementById("back-section").classList.remove("hidden");
-        clearMessages();
-        loadPublicRooms();
-      }
-
-      // 메시지 표시
-      function showMessage(message, type = "info") {
-        const messageArea = document.getElementById("message-area");
-        const messageDiv = document.createElement("div");
-        messageDiv.className = type;
-        messageDiv.textContent = message;
-        messageArea.appendChild(messageDiv);
-
-        // 5초 후 자동 제거
-        setTimeout(() => {
-          if (messageDiv.parentNode) {
-            messageDiv.remove();
-          }
-        }, 5000);
-      }
-
-      // 메시지 초기화
-      function clearMessages() {
-        document.getElementById("message-area").innerHTML = "";
-      }
-
-      // 공개 방 목록 로드
-      function loadPublicRooms() {
-        const roomsList = document.getElementById("rooms-list");
-        roomsList.innerHTML =
-          '<div class="loading">방 목록을 불러오는 중...</div>';
-
-        // 실제 구현에서는 서버에서 방 목록을 가져옴
-        setTimeout(() => {
-          const mockRooms = [
-            {
-              id: "ABC123",
-              name: "친구들과 세넷",
-              players: 2,
-              maxPlayers: 4,
-              status: "대기 중",
-            },
-            {
-              id: "DEF456",
-              name: "세넷 마스터",
-              players: 3,
-              maxPlayers: 4,
-              status: "게임 중",
-            },
-            {
-              id: "GHI789",
-              name: "초보자 환영",
-              players: 1,
-              maxPlayers: 4,
-              status: "대기 중",
-            },
-          ];
-
-          roomsList.innerHTML = "";
-          mockRooms.forEach((room) => {
-            const roomItem = createRoomItem(room);
-            roomsList.appendChild(roomItem);
-          });
-        }, 1000);
-      }
-
-      // 방 아이템 생성
-      function createRoomItem(room) {
-        const roomItem = document.createElement("div");
-        roomItem.className = "room-item";
-
-        const playerDots = Array.from(
-          { length: room.maxPlayers },
-          (_, i) =>
-            `<div class="player-dot ${i < room.players ? "active" : ""}"></div>`
-        ).join("");
-
-        roomItem.innerHTML = `
-          <div class="room-info">
-            <div class="room-name">${room.name}</div>
-            <div class="room-status">${room.status} • ${room.id}</div>
-          </div>
-          <div class="player-count">
-            <span>${room.players}/${room.maxPlayers}</span>
-            <div class="player-dots">${playerDots}</div>
-          </div>
-          <button class="btn-join" ${
-            room.status === "게임 중" ? "disabled" : ""
-          } onclick="joinRoom('${room.id}')">
-            ${room.status === "게임 중" ? "게임 중" : "참가"}
+    <!-- 규칙 모달 -->
+    <dialog id="rules">
+      <div class="modal">
+        <header><h2>세넷 규칙 요약</h2></header>
+        <div class="body">
+          <ol>
+            <li>
+              막대기 4개: 앞면 수(1~4)만큼 이동, 모두 뒷면이면 5칸. 4·5는
+              추가턴(단, 물칸 착지/패스 시 추가턴 없음).
+            </li>
+            <li>
+              같은 편 말 위에는 착지 불가. 상대 말 한 개면 자리 교환, 단
+              <b>안전칸(15,26)</b> 또는 상대가 연속(보호) 중이면 교환 불가.
+            </li>
+            <li>
+              상대 연속 ≥2는 쌍둥이 벽: 그 칸을
+              <b>지나갈 수도, 착지할 수도 없음</b>.
+            </li>
+            <li>27(물): 착지 시 즉시 15(없으면 26)으로 귀환하고 턴 종료.</li>
+            <li>30(탈출): 정확히 도착해야 탈출. 모든 말 탈출 시 승리.</li>
+          </ol>
+        </div>
+        <footer>
+          <button
+            class="btn ghost"
+            onclick="document.getElementById('rules').close()"
+          >
+            닫기
           </button>
-        `;
+        </footer>
+      </div>
+    </dialog>
 
-        return roomItem;
-      }
-
-      // 방 참가
-      function joinRoom(roomCode) {
-        const playerName = prompt("플레이어 이름을 입력하세요:");
-        if (playerName) {
-          showMessage(`방 ${roomCode}에 참가 중...`, "success");
-          // 실제 구현에서는 서버에 참가 요청을 보냄
-          setTimeout(() => {
-            window.location.href = `index.html?room=${roomCode}&player=${encodeURIComponent(
-              playerName
-            )}`;
-          }, 1000);
-        }
-      }
-
-      // 이벤트 리스너 등록
-      document.addEventListener("DOMContentLoaded", function () {
-        // 방 생성 폼 제출
-        document
-          .getElementById("create-room-form")
-          .addEventListener("submit", function (e) {
-            e.preventDefault();
-            const roomName = document.getElementById("room-name").value;
-            const playerName = document.getElementById("player-name").value;
-            const isPublic = document.getElementById("is-public").checked;
-
-            showMessage("방을 생성하는 중...", "success");
-
-            // 실제 구현에서는 서버에 방 생성 요청을 보냄
-            setTimeout(() => {
-              const roomCode = Math.random()
-                .toString(36)
-                .substr(2, 6)
-                .toUpperCase();
-              showMessage(
-                `방이 생성되었습니다! 방 코드: ${roomCode}`,
-                "success"
-              );
-              setTimeout(() => {
-                window.location.href = `index.html?room=${roomCode}&player=${encodeURIComponent(
-                  playerName
-                )}`;
-              }, 2000);
-            }, 1000);
-          });
-
-        // 방 참가 폼 제출
-        document
-          .getElementById("join-room-form")
-          .addEventListener("submit", function (e) {
-            e.preventDefault();
-            const roomCode = document.getElementById("room-code").value;
-            const playerName =
-              document.getElementById("join-player-name").value;
-
-            showMessage(`방 ${roomCode}에 참가 중...`, "success");
-
-            // 실제 구현에서는 서버에 참가 요청을 보냄
-            setTimeout(() => {
-              window.location.href = `index.html?room=${roomCode}&player=${encodeURIComponent(
-                playerName
-              )}`;
-            }, 1000);
-          });
-      });
-    </script>
+    <!-- 승리 팝업 모달 -->
+    <dialog id="victory-popup">
+      <div class="victory-modal">
+        <div class="victory-content">
+          <div class="victory-icon">🏆</div>
+          <h2 class="victory-title">승리!</h2>
+          <p class="victory-message" id="victory-message">게임에서 승리했습니다!</p>
+          <div class="victory-details" id="victory-details"></div>
+          <div class="victory-actions">
+            <button class="btn primary" id="victory-ok-btn">확인</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
   </body>
 </html>
