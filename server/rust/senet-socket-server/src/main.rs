@@ -29,9 +29,10 @@ async fn main() {
 
     let app = Router::new()
         .route("/ws", get(ws_handler))
+        .route("/healthz", get(|| async { "ok" }))
         .with_state(state);
 
-    let addr = "0.0.0.0:8080";
+    let addr = "0.0.0.0:1771";
     info!("🚀 Senet WebSocket 서버 시작 중...");
 
     match TcpListener::bind(addr).await {

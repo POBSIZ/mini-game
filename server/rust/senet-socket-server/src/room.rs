@@ -51,13 +51,16 @@ pub async fn create_room(
     {
         let mut inner = room.inner.write().await;
 
+        // 방장의 고유한 표시명 생성 (방장은 항상 첫 번째이므로 중복 없음)
+        let unique_display_name = crate::types::generate_unique_display_name(&inner, &player_name);
+
         // 방장을 플레이어로 등록
         let ptx = tx.clone();
         inner.players.insert(
             player_id.clone(),
             Player {
                 id: player_id.clone(),
-                name: player_name.clone(),
+                name: unique_display_name.clone(),
                 tx: ptx,
             },
         );
@@ -68,7 +71,7 @@ pub async fn create_room(
         let msg = ServerMsg::RoomCreated {
             room_id: room_id.clone(),
             room_name: inner.name.clone(),
-            owner: player_name.clone(),
+            owner: unique_display_name.clone(),
             max_players: inner.max_players as u8,
             status: "waiting".into(),
         };
@@ -78,10 +81,15 @@ pub async fn create_room(
 
         // 방장에게 ROOM_JOINED 메시지도 개별 전송 (플레이어 목록 업데이트용)
         let players_json = crate::types::collect_players(&inner);
+        let current_player_info = players_json.iter().find(|p| {
+            p.get("playerId").and_then(|id| id.as_str()) == Some(&player_id)
+        }).cloned();
+        
         let join_msg = ServerMsg::RoomJoined {
             room_id: room_id.clone(),
             room_name: inner.name.clone(),
             players: players_json.clone(),
+            current_player: current_player_info,
         };
         if let Err(e) = tx.send(join_msg.wrap()).await {
             eprintln!("❌ ROOM_JOINED 메시지 전송 실패: {}", e);
@@ -93,6 +101,7 @@ pub async fn create_room(
                 room_id: room_id.clone(),
                 room_name: inner.name.clone(),
                 players: players_json,
+                current_player: None, // 다른 플레이어들에게는 현재 플레이어 정보 불필요
             })
             .ok();
         inner.last_activity = ts();
@@ -127,12 +136,15 @@ pub async fn join_room(
             return Err("ALREADY_JOINED".to_string());
         }
 
+        // 플레이어의 고유한 표시명 생성
+        let unique_display_name = crate::types::generate_unique_display_name(&inner, &player_name);
+
         // 플레이어 등록 & 좌석 배정
         inner.players.insert(
             player_id.clone(),
             Player {
                 id: player_id.clone(),
-                name: player_name.clone(),
+                name: unique_display_name.clone(),
                 tx: tx.clone(),
             },
         );
@@ -150,10 +162,15 @@ pub async fn join_room(
 
         // 새로 참가한 플레이어에게 개별 메시지 전송
         let players_json = crate::types::collect_players(&inner);
+        let current_player_info = players_json.iter().find(|p| {
+            p.get("playerId").and_then(|id| id.as_str()) == Some(&player_id)
+        }).cloned();
+        
         let join_msg = ServerMsg::RoomJoined {
             room_id: room.id.clone(),
             room_name: inner.name.clone(),
             players: players_json.clone(),
+            current_player: current_player_info,
         };
         if let Err(e) = tx.send(join_msg.wrap()).await {
             eprintln!("❌ ROOM_JOINED 메시지 전송 실패: {}", e);
@@ -165,6 +182,7 @@ pub async fn join_room(
                 room_id: room.id.clone(),
                 room_name: inner.name.clone(),
                 players: players_json,
+                current_player: None, // 다른 플레이어들에게는 현재 플레이어 정보 불필요
             })
             .ok();
         inner.last_activity = ts();
@@ -177,7 +195,7 @@ pub async fn join_room(
     }
 }
 
-pub async fn leave_room(room: &Arc<Room>, player_id: String) {
+pub async fn leave_room(room: &Arc<Room>, player_id: String) -> bool {
     let mut inner = room.inner.write().await;
 
     // 플레이어 정보 저장 (알림용)
@@ -219,9 +237,20 @@ pub async fn leave_room(room: &Arc<Room>, player_id: String) {
             .ok();
     }
 
-    // 게임 중이었다면 게임 종료 처리
+    // 게임 중이었다면 게임 종료 처리 및 게임 정보 초기화
     if inner.status == RoomStatus::Playing {
         inner.status = RoomStatus::Waiting;
+        
+        // 게임 정보 초기화
+        inner.game = crate::game::GameState::new();
+        inner.game_id = uuid::Uuid::new_v4().to_string();
+        
+        // 모든 플레이어의 준비 상태 초기화
+        for player_entry in inner.players.iter() {
+            let player_id = player_entry.key().clone();
+            inner.ready.insert(player_id, false);
+        }
+        
         room.tx
             .send(ServerMsg::PlayerStatus {
                 room_id: room.id.clone(),
@@ -251,8 +280,12 @@ pub async fn leave_room(room: &Arc<Room>, player_id: String) {
             room_id: room.id.clone(),
             room_name: inner.name.clone(),
             players: players_json,
+            current_player: None, // 방 정보 업데이트에는 현재 플레이어 정보 불필요
         })
         .ok();
+
+    // 방이 비어있는지 확인하여 반환
+    inner.players.is_empty()
 }
 
 pub async fn delete_room(
@@ -385,6 +418,11 @@ pub async fn get_room_list(state: &AppState, filters: serde_json::Value) -> Serv
     let has_password_filter = filters.get("hasPassword");
     let max_players_filter = filters.get("maxPlayers");
 
+    println!("🔍 get_room_list 호출됨 - 필터: {:?}", filters);
+    println!("🔍 상태 필터: {}, 비밀번호 필터: {:?}, 최대 플레이어 필터: {:?}", 
+             status_filter, has_password_filter, max_players_filter);
+    println!("🔍 현재 저장된 방 수: {}", state.rooms.len());
+
     let mut rooms = vec![];
 
     for room_entry in state.rooms.iter() {
@@ -392,6 +430,8 @@ pub async fn get_room_list(state: &AppState, filters: serde_json::Value) -> Serv
         let inner = room.inner.try_read();
 
         if let Ok(inner) = inner {
+            println!("🔍 방 처리 중: ID={}, 이름={}, 상태={:?}, 비밀번호={:?}, 플레이어수={}", 
+                     room.id, inner.name, inner.status, inner.password, inner.players.len());
             // 상태 필터링
             let status_match = match status_filter {
                 "waiting" => matches!(inner.status, RoomStatus::Waiting),
@@ -399,7 +439,11 @@ pub async fn get_room_list(state: &AppState, filters: serde_json::Value) -> Serv
                 _ => true, // "all" or 기타
             };
 
+            println!("🔍 상태 필터링: 방={}, 상태={:?}, 필터={}, 매치={}", 
+                     room.id, inner.status, status_filter, status_match);
+
             if !status_match {
+                println!("❌ 상태 필터로 인해 제외됨: {}", room.id);
                 continue;
             }
 
@@ -409,7 +453,11 @@ pub async fn get_room_list(state: &AppState, filters: serde_json::Value) -> Serv
                 _ => true, // null이거나 다른 값이면 모두 포함
             };
 
+            println!("🔍 비밀번호 필터링: 방={}, 비밀번호={:?}, 필터={:?}, 매치={}", 
+                     room.id, inner.password, has_password_filter, password_match);
+
             if !password_match {
+                println!("❌ 비밀번호 필터로 인해 제외됨: {}", room.id);
                 continue;
             }
 

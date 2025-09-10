@@ -1,0 +1,9 @@
+services:
+  app:
+    image: senet-ws-proto:latest
+    build: .
+    ports:
+      - "1771:1771"
+    environment:
+      - APP_ADDR=0.0.0.0:1771
+    restart: unless-stopped

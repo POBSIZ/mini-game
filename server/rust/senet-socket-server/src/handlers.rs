@@ -360,6 +360,13 @@ async fn client_loop(state: AppState, socket: WebSocket) {
                             let inner = room.inner.try_read();
                             if let Ok(inner) = inner {
                                 if inner.players.contains_key(&pid) {
+                                    // 플레이어 이름을 먼저 저장
+                                    let player_name = inner
+                                        .players
+                                        .get(&pid)
+                                        .map(|p| p.name.clone())
+                                        .unwrap_or_else(|| pid.clone());
+                                    
                                     info!(
                                         "✅ 방 복구 성공: 플레이어 '{}' 를 방 '{}' 에 다시 연결",
                                         pid, rid
@@ -406,7 +413,7 @@ async fn client_loop(state: AppState, socket: WebSocket) {
                                     // 방 상태 복구
                                     joined_room = Some(room.clone());
                                     self_player_id = Some(pid.clone());
-                                    self_player_name = Some(pid.clone()); // 임시로 ID를 이름으로 사용
+                                    self_player_name = Some(player_name);
 
                                     info!("🔄 방 상태 복구 완료");
                                 } else {
@@ -815,14 +822,13 @@ async fn client_loop(state: AppState, socket: WebSocket) {
                         .ok();
 
                     // 방에서 플레이어 제거
-                    leave_room(&room, pid.clone()).await;
+                    let is_empty = leave_room(&room, pid.clone()).await;
 
-                    // 방이 비어있으면 방 삭제
-                    let inner = room.inner.read().await;
-                    if inner.players.is_empty() {
-                        drop(inner);
-                        state.rooms.remove(&room.id);
-                        println!("🗑️ 빈 방 삭제: {}", room.id);
+                    // 방이 비어있으면 즉시 삭제
+                    if is_empty {
+                        let room_id = room.id.clone();
+                        state.rooms.remove(&room_id);
+                        info!("🗑️ 빈 방 즉시 삭제: {}", room_id);
                     }
                 }
             }
@@ -935,15 +941,14 @@ async fn client_loop(state: AppState, socket: WebSocket) {
                 warn!("❌ 연결 끊김 알림 전송 실패: {}", e);
             }
 
-            // 방에서 플레이어 제거
-            leave_room(&room, pid).await;
+            // 방에서 플레이어 제거 (게임 정보 초기화 포함)
+            let is_empty = leave_room(&room, pid).await;
 
-            // 방이 비어있으면 방 삭제
-            let inner = room.inner.read().await;
-            if inner.players.is_empty() {
-                drop(inner);
-                state.rooms.remove(&room.id);
-                info!("🗑️ 빈 방 삭제: {}", room.id);
+            // 방이 비어있으면 즉시 삭제
+            if is_empty {
+                let room_id = room.id.clone();
+                state.rooms.remove(&room_id);
+                info!("🗑️ 빈 방 즉시 삭제: {}", room_id);
             }
         }
     }

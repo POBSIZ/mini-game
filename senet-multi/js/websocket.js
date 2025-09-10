@@ -13,7 +13,7 @@ export class WebSocketManager {
 
   // WebSocket 연결
   connect() {
-    this.ws = new WebSocket("ws://localhost:8080/ws");
+    this.ws = new WebSocket("ws://localhost:1771/ws");
 
     this.ws.onopen = () => {
       console.log("WebSocket 연결됨");
@@ -127,19 +127,37 @@ export class WebSocketManager {
   }
 
   handleRoomJoined(data) {
+    console.log("ROOM_JOINED 메시지 수신:", data);
+
     gameStateManager.setCurrentRoom({
       id: data.roomId,
       name: data.roomName,
       status: data.status,
     });
 
-    // 플레이어 정보 설정
-    const player = data.players.find(
-      (p) => p.playerName === gameStateManager.currentPlayer.name
-    );
+    // 플레이어 정보 설정 - current_player가 있으면 사용, 없으면 playerId로 찾기
+    let player;
+    if (data.currentPlayer) {
+      player = data.currentPlayer;
+      console.log("현재 플레이어 정보 (서버에서 제공):", player);
+    } else {
+      // playerId로 찾기 (더 정확함)
+      player = data.players.find(
+        (p) => p.playerId === gameStateManager.currentPlayer.id
+      );
+      if (!player) {
+        // playerId로 찾지 못하면 이름으로 찾기 (fallback)
+        player = data.players.find(
+          (p) => p.playerName === gameStateManager.currentPlayer.name
+        );
+      }
+      console.log("현재 플레이어 정보 (클라이언트에서 찾음):", player);
+    }
+
     if (player) {
       gameStateManager.setCurrentPlayer({
         id: player.playerId,
+        name: player.playerName, // 서버에서 제공된 이름 사용
         isOwner: player.isOwner,
         side: player.side,
       });
@@ -147,6 +165,7 @@ export class WebSocketManager {
       console.error("현재 플레이어를 찾을 수 없습니다:", {
         currentPlayerName: gameStateManager.currentPlayer.name,
         allPlayers: data.players,
+        currentPlayer: data.currentPlayer,
       });
     }
 
@@ -183,7 +202,7 @@ export class WebSocketManager {
 
   handlePlayerLeft(data) {
     console.log("handlePlayerLeft 호출됨:", data);
-    
+
     // 플레이어 이름이 없으면 대기실에서 찾기
     let playerName = data.playerName;
     if (!playerName || playerName === "Unknown") {
@@ -192,34 +211,35 @@ export class WebSocketManager {
       );
       playerName = player ? player.playerName : "Unknown";
     }
-    
+
     gameStateManager.removePlayer(data.playerId);
     uiManager.updatePlayersList();
     uiManager.updateStartButton();
     chatSystem.addSystemMessage(`${playerName}님이 방을 나갔습니다.`);
 
     // 게임 중일 때 상대방이 나간 경우 자동 승리 처리
-    if (gameStateManager.currentRoom.status === "playing" && 
-        gameStateManager.gameState && 
-        !gameStateManager.gameState.gameOver) {
-      
+    if (
+      gameStateManager.currentRoom.status === "playing" &&
+      gameStateManager.gameState &&
+      !gameStateManager.gameState.gameOver
+    ) {
       console.log("게임 중 플레이어 나감 감지:", {
         roomStatus: gameStateManager.currentRoom.status,
         gameOver: gameStateManager.gameState.gameOver,
-        leftPlayerId: data.playerId
+        leftPlayerId: data.playerId,
       });
-      
+
       // 나간 플레이어가 상대방인지 확인
       const leftPlayerSide = this.getPlayerSide(data.playerId);
       const currentPlayerSide = gameStateManager.currentPlayer.side;
-      
+
       console.log("플레이어 사이드 확인:", {
         leftPlayerSide,
         currentPlayerSide,
         leftPlayerId: data.playerId,
-        currentPlayerId: gameStateManager.currentPlayer.id
+        currentPlayerId: gameStateManager.currentPlayer.id,
       });
-      
+
       if (leftPlayerSide && leftPlayerSide !== currentPlayerSide) {
         console.log("상대방이 나감 - 자동 승리 처리 시작");
         // 상대방이 나갔으므로 현재 플레이어가 승리
@@ -320,22 +340,22 @@ export class WebSocketManager {
     } else {
       gameLogic.passTurnIfNoMoves();
     }
-    
+
     // 디버깅을 위한 로그
     console.log("막대기 굴림:", {
       roll: data.roll,
       turn: data.turn,
       canMove: data.canMove,
-      faces: data.faces
+      faces: data.faces,
     });
   }
 
   handlePieceMoved(data) {
     const move = data.move;
-    
+
     // 추가 턴인 경우 roll 값을 null로 초기화하여 다시 주사위를 굴릴 수 있게 함
     const rollValue = move.extraTurn ? null : data.gameState.roll;
-    
+
     gameStateManager.updateGameState({
       pieces: data.gameState.pieces,
       turn: data.gameState.turn,
@@ -359,29 +379,29 @@ export class WebSocketManager {
           `${move.side === "W" ? "흰말" : "검은말"} 추가턴!`
         );
       }
-      
+
       // 디버깅을 위한 로그
       console.log("말 이동 완료:", {
         move: move,
         newTurn: data.gameState.turn,
         newRoll: rollValue,
-        extraTurn: move.extraTurn
+        extraTurn: move.extraTurn,
       });
     });
   }
 
   handleTurnChanged(data) {
-    gameStateManager.updateGameState({ 
+    gameStateManager.updateGameState({
       turn: data.newTurn,
-      roll: null  // 턴이 바뀔 때 roll 값 초기화
+      roll: null, // 턴이 바뀔 때 roll 값 초기화
     });
     gameLogic.updateTurnUI();
-    
+
     // 내 차례가 돌아왔을 때만 상태 메시지 초기화
     if (data.newTurn === gameStateManager.currentPlayer.side) {
       gameLogic.clearStatusMessage();
     }
-    
+
     chatSystem.addSystemMessage(
       `${data.newTurn === "W" ? "흰말" : "검은말"} 차례입니다.`
     );
@@ -390,13 +410,15 @@ export class WebSocketManager {
   handlePassTurn(data) {
     // 턴 패스 처리 - 서버에서 자동으로 턴을 변경해줄 것으로 예상
     console.log("턴 패스 처리:", data);
-    
+
     // 상태 메시지 업데이트
     const statusEl = document.getElementById("status");
     if (statusEl) {
-      statusEl.textContent = `${data.turn === "W" ? "흰말" : "검은말"} 이동 불가 — 턴을 넘깁니다.`;
+      statusEl.textContent = `${
+        data.turn === "W" ? "흰말" : "검은말"
+      } 이동 불가 — 턴을 넘깁니다.`;
     }
-    
+
     // 잠시 후 메시지 지우기
     setTimeout(() => {
       if (statusEl) statusEl.textContent = "";
@@ -423,9 +445,13 @@ export class WebSocketManager {
     // 팝업이 닫힌 후 대기실로 돌아가기 (팝업 확인 버튼 클릭 시)
     const popup = document.getElementById("victory-popup");
     if (popup) {
-      popup.addEventListener("close", () => {
-        uiManager.showWaitingRoom();
-      }, { once: true });
+      popup.addEventListener(
+        "close",
+        () => {
+          uiManager.showWaitingRoom();
+        },
+        { once: true }
+      );
     } else {
       // 팝업이 없는 경우 3초 후 대기실로 돌아가기
       setTimeout(() => {
@@ -453,7 +479,7 @@ export class WebSocketManager {
 
   handlePlayerStatus(data) {
     console.log("PLAYER_STATUS 메시지 수신:", data);
-    
+
     if (data.status === "disconnected") {
       chatSystem.addSystemMessage("플레이어가 연결이 끊어졌습니다.");
     } else if (data.status === "connected") {
@@ -464,7 +490,7 @@ export class WebSocketManager {
       this.handlePlayerLeft({
         playerId: data.playerId,
         playerName: "Unknown", // 서버에서 이름을 보내지 않으므로 임시로 Unknown
-        newOwner: null // 필요시 추가 로직으로 처리
+        newOwner: null, // 필요시 추가 로직으로 처리
       });
     } else if (data.status === "game_cancelled") {
       chatSystem.addSystemMessage("게임이 취소되었습니다.");
@@ -489,33 +515,37 @@ export class WebSocketManager {
   // 상대방 연결 끊김 처리
   handleOpponentDisconnect(winnerSide) {
     console.log("handleOpponentDisconnect 호출됨:", winnerSide);
-    
+
     // 게임 상태를 종료로 설정
     gameStateManager.updateGameState({ gameOver: true });
-    
+
     // 승리 메시지 표시
     const winnerName = gameStateManager.currentPlayer.name;
     const winnerSideName = winnerSide === "W" ? "흰말" : "검은말";
-    
+
     uiManager.showMessage(
-      `🎉 승리! 상대방이 나가서 ${winnerName}님 (${winnerSideName})이 승리했습니다!`, 
+      `🎉 승리! 상대방이 나가서 ${winnerName}님 (${winnerSideName})이 승리했습니다!`,
       "success"
     );
-    
+
     // 채팅에 시스템 메시지 추가
     chatSystem.addSystemMessage(
       `게임이 종료되었습니다. 상대방이 나가서 ${winnerName}님이 승리했습니다!`
     );
-    
+
     // UI 매니저를 통해 게임 종료 상태 표시 (팝업 포함)
     uiManager.showGameOverState(winnerName, winnerSide, "opponent_left");
-    
+
     // 팝업이 닫힌 후 대기실로 돌아가기 (팝업 확인 버튼 클릭 시)
     const popup = document.getElementById("victory-popup");
     if (popup) {
-      popup.addEventListener("close", () => {
-        uiManager.showWaitingRoom();
-      }, { once: true });
+      popup.addEventListener(
+        "close",
+        () => {
+          uiManager.showWaitingRoom();
+        },
+        { once: true }
+      );
     } else {
       // 팝업이 없는 경우 5초 후 대기실로 돌아가기
       setTimeout(() => {

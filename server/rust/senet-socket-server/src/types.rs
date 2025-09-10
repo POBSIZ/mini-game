@@ -105,3 +105,39 @@ pub fn get_str(d: &Value, key: &str) -> String {
         .unwrap_or("")
         .to_string()
 }
+
+/// 플레이어 이름 중복을 방지하기 위해 고유한 표시명을 생성합니다.
+/// 같은 이름이 이미 존재하면 숫자를 붙여서 구분합니다.
+pub fn generate_unique_display_name(inner: &RoomInner, requested_name: &str) -> String {
+    let base_name = requested_name.trim();
+    if base_name.is_empty() {
+        return "Player".to_string();
+    }
+
+    // 기존 플레이어들의 이름 목록 수집
+    let existing_names: std::collections::HashSet<String> = inner
+        .players
+        .iter()
+        .map(|entry| entry.value().name.clone())
+        .collect();
+
+    // 요청된 이름이 이미 존재하지 않으면 그대로 사용
+    if !existing_names.contains(base_name) {
+        return base_name.to_string();
+    }
+
+    // 중복되는 경우 숫자를 붙여서 고유한 이름 생성
+    let mut counter = 1;
+    loop {
+        let candidate_name = format!("{}#{}", base_name, counter);
+        if !existing_names.contains(&candidate_name) {
+            return candidate_name;
+        }
+        counter += 1;
+        
+        // 무한 루프 방지 (최대 999까지)
+        if counter > 999 {
+            return format!("{}#{}", base_name, uuid::Uuid::new_v4().to_string()[..8].to_string());
+        }
+    }
+}

@@ -204,9 +204,6 @@ impl GameState {
             return (false, false, false, None);
         }
 
-        // 물을 통과했는지 확인 (JavaScript와 동일한 로직)
-        let passes_water = ((from + 1)..=to).any(|s| s == WATER_SQUARE);
-
         // 기본 추가턴 여부 (4 또는 5일 때)
         let mut extra = roll == 4 || roll == 5;
 
@@ -219,13 +216,10 @@ impl GameState {
         }
 
         let action = if to == EXIT_SQUARE {
-            // 탈출하는 경우 - 물을 통과했으면 추가턴 취소
-            if passes_water {
-                extra = false;
-            }
+            // 탈출하는 경우 - 추가턴 유지 (JavaScript와 동일)
             Act::Exit
         } else if to == WATER_SQUARE {
-            // 물에 도착하는 경우
+            // 물에 도착하는 경우 - 추가턴 취소 (JavaScript와 동일)
             let s15_free = self.board_occupant(15).is_none();
             let s26_free = self.board_occupant(26).is_none();
             if !(s15_free || s26_free) {
@@ -241,19 +235,16 @@ impl GameState {
                 if SAFE_SQUARES.contains(&to) || self.is_adjacent_same_color(to, c) {
                     return (false, false, false, None);
                 }
-                // 상대방 말을 잡는 경우 - 물을 통과했으면 추가턴 취소
-                if passes_water {
-                    extra = false;
-                }
+                // 상대방 말을 잡는 경우 - 추가턴 유지 (JavaScript와 동일)
                 Act::Swap(c, eidx)
             } else {
-                // 빈 칸으로 이동하는 경우 - 물을 통과했으면 추가턴 취소
-                if passes_water {
-                    extra = false;
-                }
+                // 빈 칸으로 이동하는 경우 - 추가턴 유지 (JavaScript와 동일)
                 Act::Move
             }
         };
+
+        // 물을 통과했는지 확인 (반환값용)
+        let passes_water = ((from + 1)..=to).any(|s| s == WATER_SQUARE);
 
         // 2) 가변 갱신
         let mut captured = None;

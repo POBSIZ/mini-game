@@ -1,0 +1,37 @@
+# ---- Build stage ----
+  FROM rust:1.80-slim AS builder
+  WORKDIR /app
+  
+  # 빌드 도구 및 (옵션) SSL 의존성
+  RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential pkg-config libssl-dev ca-certificates && \
+      rm -rf /var/lib/apt/lists/*
+  
+  # 의존성 캐시 최적화
+  COPY Cargo.toml Cargo.lock ./
+  RUN mkdir src && echo "fn main() { println!(\"dummy\"); }" > src/main.rs
+  RUN cargo build --release || true
+  
+  # 실제 소스 복사 & 릴리즈 빌드
+  COPY . .
+  RUN cargo build --release
+  
+  # ---- Runtime stage ----
+  FROM debian:bookworm-slim
+  WORKDIR /app
+  # 런타임에 HTTPS 호출 시 필요할 수 있는 CA
+  RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && \
+      rm -rf /var/lib/apt/lists/*
+  
+  # 보안상 권장: 비루트 사용자
+  RUN useradd -r -s /usr/sbin/nologin appuser
+  COPY --from=builder /app/target/release/senet-ws-proto /app/app
+  USER appuser
+  
+  ENV APP_ADDR=0.0.0.0:1771
+  EXPOSE 1771
+  
+  # 헬스체크 (선택)
+  HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD curl -fsS http://127.0.0.1:1771/healthz || exit 1
+  
+  CMD ["/app/app"]

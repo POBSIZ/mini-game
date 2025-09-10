@@ -23,6 +23,8 @@ pub enum ServerMsg {
         #[serde(rename = "roomName")]
         room_name: String,
         players: Vec<Value>,
+        #[serde(rename = "currentPlayer")]
+        current_player: Option<Value>,
     },
     PlayerReady {
         #[serde(rename = "roomId")]
@@ -157,12 +159,14 @@ impl ServerMsg {
                 room_id,
                 room_name,
                 players,
+                current_player,
             } => (
                 "ROOM_JOINED".to_string(),
                 json!({
                     "roomId": room_id,
                     "roomName": room_name,
-                    "players": players
+                    "players": players,
+                    "currentPlayer": current_player
                 }),
             ),
             ServerMsg::PlayerReady {

@@ -70,15 +70,6 @@ export class GameLogic {
       });
     }
 
-    // 팝업 테스트 버튼
-    const testPopupBtn = document.getElementById("btn-test-popup");
-    if (testPopupBtn) {
-      testPopupBtn.addEventListener("click", () => {
-        console.log("팝업 테스트 버튼 클릭됨");
-        uiManager.showVictoryPopup("테스트플레이어", "W", "opponent_left");
-      });
-    }
-
     // 초기 게임 그리기
     this.draw();
 
