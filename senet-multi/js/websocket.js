@@ -13,7 +13,7 @@ export class WebSocketManager {
 
   // WebSocket 연결
   connect() {
-    this.ws = new WebSocket("ws://localhost:1771/ws");
+    this.ws = new WebSocket("ws://game.pobsiz.com/senet/ws");
 
     this.ws.onopen = () => {
       console.log("WebSocket 연결됨");
