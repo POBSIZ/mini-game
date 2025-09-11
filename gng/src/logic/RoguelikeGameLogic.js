@@ -2,17 +2,32 @@
  * 로그라이크 게임 로직 클래스
  * 게임 상태 관리, 맵 생성, 전투, 아이템 처리 등의 핵심 로직을 담당
  */
-import { ROGUELIKE_CONFIG } from "../data/Config.js";
+import { BaseGameLogic } from "./BaseGameLogic.js";
+import { ROGUELIKE_CONFIG, GAME_EVENTS, DIRECTIONS } from "../data/Config.js";
 import {
   WEAPONS,
   ARMORS,
   ENEMY_TYPES,
   ITEM_DEFINITIONS,
+  BALANCE_CONFIG,
 } from "../data/RoguelikeData.js";
+import {
+  isValidCoordinate,
+  isValidPlayer,
+  isValidEnemy,
+  isValidItem,
+} from "../data/Validation.js";
+import {
+  randomInt,
+  randomChoice,
+  calculateDistance,
+  getRandomElement,
+} from "../utils/Utils.js";
 
-export class RoguelikeGameLogic {
+export class RoguelikeGameLogic extends BaseGameLogic {
   constructor() {
-    this.gameState = this.initializeGameState();
+    super();
+    this.init();
   }
 
   /**
@@ -52,7 +67,7 @@ export class RoguelikeGameLogic {
    * 게임 상태 초기화 (재시작용)
    */
   resetGame() {
-    this.gameState = this.initializeGameState();
+    this.reset();
   }
 
   /**
@@ -883,7 +898,7 @@ export class RoguelikeGameLogic {
       return true;
     } else if (item.type === "cooked_food") {
       this.gameState.inventory.splice(index, 1);
-      
+
       // HP 회복
       const hpGain = Phaser.Math.Between(item.hp[0], item.hp[1]);
       const beforeHp = this.gameState.player.hp;
@@ -891,7 +906,7 @@ export class RoguelikeGameLogic {
         this.gameState.player.max,
         this.gameState.player.hp + hpGain
       );
-      
+
       // 배고픔 회복
       const hungerGain = Phaser.Math.Between(item.hunger[0], item.hunger[1]);
       const beforeHunger = this.gameState.player.hunger;
@@ -899,15 +914,17 @@ export class RoguelikeGameLogic {
         ROGUELIKE_CONFIG.HUNGER_MAX,
         this.gameState.player.hunger + hungerGain
       );
-      
+
       // 특별한 레시피인 경우 추가 효과
       let specialMessage = "";
       if (item.isSpecial) {
         specialMessage = " ✨ 특별한 맛!";
       }
-      
+
       this.addMessage(
-        `"${item.name}"을(를) 맛있게 먹었습니다!${specialMessage} HP +${this.gameState.player.hp - beforeHp}, 배고픔 +${this.gameState.player.hunger - beforeHunger}`
+        `"${item.name}"을(를) 맛있게 먹었습니다!${specialMessage} HP +${
+          this.gameState.player.hp - beforeHp
+        }, 배고픔 +${this.gameState.player.hunger - beforeHunger}`
       );
       return true;
     }
@@ -974,13 +991,16 @@ export class RoguelikeGameLogic {
   }
 
   /**
-   * 메시지 추가
+   * 메시지 추가 (BaseGameLogic의 addMessage 사용)
    * @param {string} text - 메시지 텍스트
    * @param {boolean} isDanger - 위험 메시지 여부
    */
   addMessage(text, isDanger = false) {
-    this.gameState.messages.unshift({ text, isDanger });
-    this.gameState.messages = this.gameState.messages.slice(0, 6);
+    super.addMessage(text, isDanger);
+    // UI 표시를 위해 최근 6개 메시지만 유지
+    if (this.gameState.messages.length > 6) {
+      this.gameState.messages = this.gameState.messages.slice(0, 6);
+    }
   }
 
   /**
@@ -989,13 +1009,13 @@ export class RoguelikeGameLogic {
    */
   setMapBorders() {
     const { VIEW_WIDTH, VIEW_HEIGHT } = ROGUELIKE_CONFIG;
-    
+
     // 상단과 하단 가장자리
     for (let x = 0; x < VIEW_WIDTH; x++) {
       this.gameState.map[0][x] = 1; // 상단
       this.gameState.map[VIEW_HEIGHT - 1][x] = 1; // 하단
     }
-    
+
     // 좌측과 우측 가장자리
     for (let y = 0; y < VIEW_HEIGHT; y++) {
       this.gameState.map[y][0] = 1; // 좌측

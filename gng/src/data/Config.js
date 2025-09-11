@@ -98,4 +98,38 @@ export const GAME_EVENTS = {
   ITEM_PICKED_UP: "itemPickedUp",
   GAME_OVER: "gameOver",
   LEVEL_COMPLETE: "levelComplete",
+  COOKING_START: "cookingStart",
+  COOKING_END: "cookingEnd",
+  INVENTORY_TOGGLE: "inventoryToggle",
+  MESSAGE_ADDED: "messageAdded",
+};
+
+// 게임 상태 타입
+export const GAME_STATES = {
+  MENU: "menu",
+  PLAYING: "playing",
+  PAUSED: "paused",
+  GAME_OVER: "gameOver",
+  VICTORY: "victory",
+};
+
+// 방향 상수
+export const DIRECTIONS = {
+  UP: { x: 0, y: -1 },
+  DOWN: { x: 0, y: 1 },
+  LEFT: { x: -1, y: 0 },
+  RIGHT: { x: 1, y: 0 },
+  UP_LEFT: { x: -1, y: -1 },
+  UP_RIGHT: { x: 1, y: -1 },
+  DOWN_LEFT: { x: -1, y: 1 },
+  DOWN_RIGHT: { x: 1, y: 1 },
+};
+
+// AI 타입
+export const AI_TYPES = {
+  PASSIVE: "passive",
+  AGGRESSIVE: "aggressive",
+  BOSS: "boss",
+  GUARD: "guard",
+  PATROL: "patrol",
 };

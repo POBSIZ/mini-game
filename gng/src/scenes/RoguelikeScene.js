@@ -1,4 +1,10 @@
-import { ROGUELIKE_CONFIG, UI_CONFIG, TILE_TYPES } from "../data/Config.js";
+import { BaseScene } from "./BaseScene.js";
+import {
+  ROGUELIKE_CONFIG,
+  UI_CONFIG,
+  TILE_TYPES,
+  GAME_EVENTS,
+} from "../data/Config.js";
 import { ENEMY_TYPES, ITEM_DEFINITIONS } from "../data/RoguelikeData.js";
 import { RoguelikeGameLogic } from "../logic/RoguelikeGameLogic.js";
 
@@ -49,12 +55,11 @@ const COLORS = {
   COOKING_BUTTON_TEXT: "#0b0d10",
 };
 
-export default class RoguelikeScene extends Phaser.Scene {
+export default class RoguelikeScene extends BaseScene {
   constructor() {
     super({ key: "RoguelikeScene" });
 
     // 초기화
-    this.gameLogic = null;
     this.mapContainer = null;
     this.cameraOffsetX = 0;
     this.cameraOffsetY = 0;
@@ -97,6 +102,74 @@ export default class RoguelikeScene extends Phaser.Scene {
    */
   initializeGameLogic() {
     this.gameLogic = new RoguelikeGameLogic();
+    this.setupGameEventListeners();
+  }
+
+  /**
+   * 게임 이벤트 리스너 설정
+   * @private
+   */
+  setupGameEventListeners() {
+    this.onGameEvent(GAME_EVENTS.MESSAGE_ADDED, (message) => {
+      this.updateMessageLog();
+    });
+
+    this.onGameEvent(GAME_EVENTS.GAME_OVER, (data) => {
+      this.handleGameOver(data);
+    });
+
+    this.onGameEvent(GAME_EVENTS.PLAYER_LEVEL_UP, (data) => {
+      this.updateHUD();
+    });
+  }
+
+  /**
+   * 게임 오버 처리
+   * @param {Object} data - 게임 오버 데이터
+   * @private
+   */
+  handleGameOver(data) {
+    if (data && data.reason === "victory") {
+      this.showVictoryScreen();
+    } else {
+      this.showGameOverScreen();
+    }
+  }
+
+  /**
+   * 승리 화면 표시
+   * @private
+   */
+  showVictoryScreen() {
+    const victoryText = this.createText(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      "승리! 🏆",
+      {
+        fontSize: UI_CONFIG.FONTS.SIZES.TITLE,
+        color: UI_CONFIG.COLORS.SUCCESS,
+      }
+    ).setOrigin(0.5);
+
+    this.registerUIElement("victory", victoryText);
+  }
+
+  /**
+   * 게임 오버 화면 표시
+   * @private
+   */
+  showGameOverScreen() {
+    const gameOverText = this.createText(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      "게임 오버",
+      {
+        fontSize: UI_CONFIG.FONTS.SIZES.TITLE,
+        color: UI_CONFIG.COLORS.DANGER,
+      }
+    ).setOrigin(0.5);
+
+    this.registerUIElement("gameOver", gameOverText);
   }
 
   /**

@@ -42,3 +42,23 @@ export {
   LEVEL_UP_REWARDS,
   BALANCE_CONFIG,
 } from "./RoguelikeData.js";
+
+// 데이터 검증 유틸리티
+export {
+  isValidItemType,
+  isValidTileType,
+  isValidPlayerState,
+  isValidGameMode,
+  isValidCoordinate,
+  isValidHP,
+  isValidExp,
+  isValidItem,
+  isValidEnemy,
+  isValidPlayer,
+  isValidGameState,
+  isValidIngredient,
+  isValidPalate,
+  isValidRecipe,
+  validateArray,
+  hasRequiredKeys,
+} from "./Validation.js";

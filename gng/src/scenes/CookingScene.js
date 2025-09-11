@@ -1,5 +1,6 @@
+import { BaseScene } from "./BaseScene.js";
 import { INGREDIENTS, PALATES, RECIPES } from "../data/GameData.js";
-import { UI_CONFIG } from "../data/Config.js";
+import { UI_CONFIG, GAME_EVENTS } from "../data/Config.js";
 import { CookingGameLogic } from "../logic/CookingGameLogic.js";
 
 // UI 상수 정의
@@ -62,12 +63,11 @@ const COOKING_UI_CONSTANTS = {
   },
 };
 
-export default class CookingScene extends Phaser.Scene {
+export default class CookingScene extends BaseScene {
   constructor() {
     super({ key: "CookingScene" });
 
     // 초기화
-    this.gameLogic = null;
     this.pantryState = null;
     this.palate = null;
 
@@ -88,6 +88,29 @@ export default class CookingScene extends Phaser.Scene {
     this.loadRecipeImages();
     this.initializeGameLogic();
     this.initializeGameState();
+  }
+
+  /**
+   * 게임 로직 인스턴스를 초기화합니다.
+   * @private
+   */
+  initializeGameLogic() {
+    this.gameLogic = new CookingGameLogic();
+    this.setupGameEventListeners();
+  }
+
+  /**
+   * 게임 이벤트 리스너 설정
+   * @private
+   */
+  setupGameEventListeners() {
+    this.onGameEvent(GAME_EVENTS.MESSAGE_ADDED, (message) => {
+      this.updateMessageDisplay();
+    });
+
+    this.onGameEvent(GAME_EVENTS.COOKING_END, (data) => {
+      this.handleCookingEnd(data);
+    });
   }
 
   /**

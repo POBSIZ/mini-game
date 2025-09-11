@@ -1,0 +1,291 @@
+/**
+ * 기본 씬 클래스
+ * 모든 게임 씬의 공통 기능을 제공합니다.
+ */
+
+import { UI_CONFIG, GAME_EVENTS } from "../data/Config.js";
+
+export class BaseScene extends Phaser.Scene {
+  constructor(config) {
+    super(config);
+    this.gameLogic = null;
+    this.uiElements = new Map();
+    this.eventListeners = new Map();
+  }
+
+  /**
+   * 씬 초기화
+   */
+  init() {
+    this.setupEventListeners();
+  }
+
+  /**
+   * 이벤트 리스너 설정 (하위 클래스에서 구현)
+   */
+  setupEventListeners() {
+    // 하위 클래스에서 구현
+  }
+
+  /**
+   * UI 요소 등록
+   * @param {string} key - UI 요소 키
+   * @param {Object} element - UI 요소 객체
+   */
+  registerUIElement(key, element) {
+    this.uiElements.set(key, element);
+  }
+
+  /**
+   * UI 요소 가져오기
+   * @param {string} key - UI 요소 키
+   * @returns {Object} UI 요소 객체
+   */
+  getUIElement(key) {
+    return this.uiElements.get(key);
+  }
+
+  /**
+   * UI 요소 제거
+   * @param {string} key - UI 요소 키
+   */
+  removeUIElement(key) {
+    const element = this.uiElements.get(key);
+    if (element && element.destroy) {
+      element.destroy();
+    }
+    this.uiElements.delete(key);
+  }
+
+  /**
+   * 모든 UI 요소 제거
+   */
+  clearUIElements() {
+    this.uiElements.forEach((element) => {
+      if (element && element.destroy) {
+        element.destroy();
+      }
+    });
+    this.uiElements.clear();
+  }
+
+  /**
+   * 텍스트 생성 헬퍼
+   * @param {number} x - X 좌표
+   * @param {number} y - Y 좌표
+   * @param {string} text - 텍스트 내용
+   * @param {Object} style - 텍스트 스타일
+   * @returns {Phaser.GameObjects.Text} 생성된 텍스트 객체
+   */
+  createText(x, y, text, style = {}) {
+    const defaultStyle = {
+      fontFamily: UI_CONFIG.FONTS.DEFAULT,
+      fontSize: UI_CONFIG.FONTS.SIZES.MEDIUM,
+      color: UI_CONFIG.COLORS.TEXT,
+      ...style,
+    };
+
+    return this.add.text(x, y, text, defaultStyle);
+  }
+
+  /**
+   * 버튼 생성 헬퍼
+   * @param {number} x - X 좌표
+   * @param {number} y - Y 좌표
+   * @param {string} text - 버튼 텍스트
+   * @param {Function} callback - 클릭 콜백
+   * @param {Object} style - 버튼 스타일
+   * @returns {Object} 생성된 버튼 객체
+   */
+  createButton(x, y, text, callback, style = {}) {
+    const defaultStyle = {
+      width: 120,
+      height: 40,
+      backgroundColor: UI_CONFIG.COLORS.PRIMARY,
+      borderColor: UI_CONFIG.COLORS.BORDER,
+      borderWidth: 2,
+      textColor: UI_CONFIG.COLORS.TEXT,
+      fontSize: UI_CONFIG.FONTS.SIZES.MEDIUM,
+      ...style,
+    };
+
+    const button = this.add.rectangle(
+      x,
+      y,
+      defaultStyle.width,
+      defaultStyle.height,
+      defaultStyle.backgroundColor
+    );
+    const buttonText = this.createText(x, y, text, {
+      fontSize: defaultStyle.fontSize,
+      color: defaultStyle.textColor,
+    }).setOrigin(0.5);
+
+    button.setInteractive({ useHandCursor: true });
+    button.on("pointerdown", callback);
+
+    // 호버 효과
+    button.on("pointerover", () => {
+      button.setTint(0x666666);
+    });
+    button.on("pointerout", () => {
+      button.clearTint();
+    });
+
+    return {
+      background: button,
+      text: buttonText,
+      destroy: () => {
+        button.destroy();
+        buttonText.destroy();
+      },
+    };
+  }
+
+  /**
+   * 패널 생성 헬퍼
+   * @param {number} x - X 좌표
+   * @param {number} y - Y 좌표
+   * @param {number} width - 패널 너비
+   * @param {number} height - 패널 높이
+   * @param {Object} style - 패널 스타일
+   * @returns {Phaser.GameObjects.Rectangle} 생성된 패널 객체
+   */
+  createPanel(x, y, width, height, style = {}) {
+    const defaultStyle = {
+      color: UI_CONFIG.COLORS.PANEL,
+      borderColor: UI_CONFIG.COLORS.BORDER,
+      borderWidth: 2,
+      alpha: 0.9,
+      ...style,
+    };
+
+    const panel = this.add.rectangle(x, y, width, height, defaultStyle.color);
+    panel.setAlpha(defaultStyle.alpha);
+
+    if (defaultStyle.borderWidth > 0) {
+      const border = this.add.rectangle(
+        x,
+        y,
+        width,
+        height,
+        defaultStyle.borderColor
+      );
+      border.setStrokeStyle(defaultStyle.borderWidth, defaultStyle.borderColor);
+      border.setAlpha(defaultStyle.alpha);
+    }
+
+    return panel;
+  }
+
+  /**
+   * 게임 로직 이벤트 리스너 등록
+   * @param {string} eventType - 이벤트 타입
+   * @param {Function} callback - 콜백 함수
+   */
+  onGameEvent(eventType, callback) {
+    if (!this.gameLogic) return;
+
+    this.gameLogic.on(eventType, callback, this);
+
+    if (!this.eventListeners.has(eventType)) {
+      this.eventListeners.set(eventType, []);
+    }
+    this.eventListeners.get(eventType).push(callback);
+  }
+
+  /**
+   * 게임 로직 이벤트 리스너 제거
+   * @param {string} eventType - 이벤트 타입
+   * @param {Function} callback - 콜백 함수
+   */
+  offGameEvent(eventType, callback) {
+    if (!this.gameLogic) return;
+
+    this.gameLogic.off(eventType, callback, this);
+
+    if (this.eventListeners.has(eventType)) {
+      const listeners = this.eventListeners.get(eventType);
+      const index = listeners.indexOf(callback);
+      if (index !== -1) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+
+  /**
+   * 모든 게임 이벤트 리스너 제거
+   */
+  clearGameEventListeners() {
+    if (!this.gameLogic) return;
+
+    this.eventListeners.forEach((callbacks, eventType) => {
+      callbacks.forEach((callback) => {
+        this.gameLogic.off(eventType, callback, this);
+      });
+    });
+    this.eventListeners.clear();
+  }
+
+  /**
+   * 씬 정리
+   */
+  destroy() {
+    this.clearUIElements();
+    this.clearGameEventListeners();
+    super.destroy();
+  }
+
+  /**
+   * 에러 처리
+   * @param {Error} error - 에러 객체
+   * @param {string} context - 에러 발생 컨텍스트
+   */
+  handleError(error, context = "Unknown") {
+    console.error(`[${this.scene.key}] ${context}:`, error);
+
+    // 에러 메시지 표시
+    const errorText = this.createText(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      `오류가 발생했습니다: ${error.message}`,
+      {
+        fontSize: UI_CONFIG.FONTS.SIZES.LARGE,
+        color: UI_CONFIG.COLORS.DANGER,
+      }
+    ).setOrigin(0.5);
+
+    // 3초 후 에러 메시지 제거
+    this.time.delayedCall(3000, () => {
+      if (errorText && errorText.destroy) {
+        errorText.destroy();
+      }
+    });
+  }
+
+  /**
+   * 로딩 인디케이터 표시
+   * @param {string} message - 로딩 메시지
+   */
+  showLoading(message = "로딩 중...") {
+    const loadingText = this.createText(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY,
+      message,
+      {
+        fontSize: UI_CONFIG.FONTS.SIZES.LARGE,
+        color: UI_CONFIG.COLORS.TEXT,
+      }
+    ).setOrigin(0.5);
+
+    this.registerUIElement("loading", loadingText);
+    return loadingText;
+  }
+
+  /**
+   * 로딩 인디케이터 숨기기
+   */
+  hideLoading() {
+    this.removeUIElement("loading");
+  }
+}

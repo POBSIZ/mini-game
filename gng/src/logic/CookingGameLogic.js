@@ -2,12 +2,15 @@
  * 요리 게임 로직 클래스
  * 요리 게임의 핵심 로직을 담당
  */
-import { GAME_CONFIG } from "../data/Config.js";
+import { BaseGameLogic } from "./BaseGameLogic.js";
+import { GAME_CONFIG, GAME_EVENTS } from "../data/Config.js";
 import { SYNERGY, findRecipe } from "../data/CookingData.js";
+import { isValidIngredient, isValidPalate } from "../data/Validation.js";
 
-export class CookingGameLogic {
+export class CookingGameLogic extends BaseGameLogic {
   constructor() {
-    this.gameState = this.initializeGameState();
+    super();
+    this.init();
   }
 
   /**
@@ -29,7 +32,7 @@ export class CookingGameLogic {
    * 게임 상태 초기화 (재시작용)
    */
   resetGame() {
-    this.gameState = this.initializeGameState();
+    this.reset();
   }
 
   /**
@@ -294,12 +297,16 @@ export class CookingGameLogic {
   }
 
   /**
-   * 메시지 추가
+   * 메시지 추가 (BaseGameLogic의 addMessage 사용)
    * @param {string} text - 메시지 텍스트
+   * @param {boolean} isDanger - 위험 메시지 여부
    */
-  addMessage(text) {
-    this.gameState.messages.unshift(text);
-    this.gameState.messages = this.gameState.messages.slice(0, 10);
+  addMessage(text, isDanger = false) {
+    super.addMessage(text, isDanger);
+    // UI 표시를 위해 최근 10개 메시지만 유지
+    if (this.gameState.messages.length > 10) {
+      this.gameState.messages = this.gameState.messages.slice(0, 10);
+    }
   }
 
   /**
