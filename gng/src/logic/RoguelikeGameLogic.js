@@ -514,7 +514,7 @@ export class RoguelikeGameLogic {
    * @param {Object} enemy - 공격할 적
    */
   attackEnemy(enemy) {
-    const damage = Phaser.Math.Between(
+    let damage = Phaser.Math.Between(
       this.gameState.player.atk[0],
       this.gameState.player.atk[1]
     );
