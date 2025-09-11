@@ -24,7 +24,7 @@ export const ARMORS = [
 // 적 데이터
 export const ENEMY_TYPES = {
   goblin: {
-    name: "도적 고블린",
+    name: "형광 버섯",
     symbol: "g",
     hp: [5, 7],
     atk: [1, 4],

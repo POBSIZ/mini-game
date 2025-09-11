@@ -81,6 +81,9 @@ export class RoguelikeGameLogic {
     // 방 연결
     this.connectRooms(rooms);
 
+    // 맵 가장자리를 벽으로 설정
+    this.setMapBorders();
+
     // 플레이어 위치 설정
     this.gameState.player.x = rooms[0].centerX;
     this.gameState.player.y = rooms[0].centerY;
@@ -978,6 +981,26 @@ export class RoguelikeGameLogic {
   addMessage(text, isDanger = false) {
     this.gameState.messages.unshift({ text, isDanger });
     this.gameState.messages = this.gameState.messages.slice(0, 6);
+  }
+
+  /**
+   * 맵 가장자리를 벽으로 설정
+   * @private
+   */
+  setMapBorders() {
+    const { VIEW_WIDTH, VIEW_HEIGHT } = ROGUELIKE_CONFIG;
+    
+    // 상단과 하단 가장자리
+    for (let x = 0; x < VIEW_WIDTH; x++) {
+      this.gameState.map[0][x] = 1; // 상단
+      this.gameState.map[VIEW_HEIGHT - 1][x] = 1; // 하단
+    }
+    
+    // 좌측과 우측 가장자리
+    for (let y = 0; y < VIEW_HEIGHT; y++) {
+      this.gameState.map[y][0] = 1; // 좌측
+      this.gameState.map[y][VIEW_WIDTH - 1] = 1; // 우측
+    }
   }
 
   /**

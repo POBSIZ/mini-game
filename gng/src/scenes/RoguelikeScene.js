@@ -12,10 +12,10 @@ const UI_CONSTANTS = {
   MINIMAP_FONT_SIZE: UI_CONFIG.FONTS.SIZES.LARGE,
   COOKING_BUTTON_WIDTH: 120,
   COOKING_BUTTON_HEIGHT: 40,
-  MINIMAP_WIDTH: 200,
-  MINIMAP_HEIGHT: 150,
-  MINIMAP_TILE_WIDTH: 180,
-  MINIMAP_TILE_HEIGHT: 130,
+  MINIMAP_WIDTH: 400,
+  MINIMAP_HEIGHT: 300,
+  MINIMAP_TILE_WIDTH: 360,
+  MINIMAP_TILE_HEIGHT: 260,
   COOKING_DESC_FONT_SIZE: UI_CONFIG.FONTS.SIZES.SMALL,
   IMAGE_SCALE_FACTOR: 3000, // 3000x3000 이미지 크기 기준
   MINIMAP_SCALE_FACTORS: {
@@ -111,6 +111,22 @@ export default class RoguelikeScene extends Phaser.Scene {
     // 토끼(슬라임) 이미지 로드
     this.load.image("rabbit-left", "assets/rabbit-left.png");
     this.load.image("rabbit-right", "assets/rabbit-right.png");
+
+    // 형광 버섯(고블린) 이미지 로드
+    this.load.image(
+      "glow-mushroom-mob-left",
+      "assets/glow-mushroom-mob-left.png"
+    );
+    this.load.image(
+      "glow-mushroom-mob-right",
+      "assets/glow-mushroom-mob-right.png"
+    );
+
+    // 바닥 타일 이미지 로드
+    this.load.image("ground", "assets/ground.png");
+
+    // 벽 타일 이미지 로드
+    this.load.image("wall-top", "assets/wall-top.png");
   }
 
   create() {
@@ -166,7 +182,7 @@ export default class RoguelikeScene extends Phaser.Scene {
    */
   createTitle(width) {
     this.titleText = this.add
-      .text(width / 2, 30, "⚔️ 로그라이크 던전", {
+      .text(width / 2, 20, "기깔나는거", {
         fontSize: UI_CONSTANTS.TITLE_FONT_SIZE,
         color: COLORS.TEXT_ACCENT,
         fontFamily: "Arial",
@@ -264,8 +280,8 @@ export default class RoguelikeScene extends Phaser.Scene {
    */
   createMinimap(width) {
     this.minimapPanel = this.add.rectangle(
-      width - 120,
-      200,
+      width - 210,
+      240,
       UI_CONSTANTS.MINIMAP_WIDTH,
       UI_CONSTANTS.MINIMAP_HEIGHT,
       COLORS.BACKGROUND
@@ -274,7 +290,7 @@ export default class RoguelikeScene extends Phaser.Scene {
     this.minimapPanel.setDepth(UI_CONSTANTS.Z_INDEX.UI);
 
     this.minimapTitle = this.add
-      .text(width - 120, 130, "미니맵", {
+      .text(width - 210, 110, "미니맵", {
         fontSize: UI_CONSTANTS.MINIMAP_FONT_SIZE,
         color: COLORS.TEXT_ACCENT,
         fontFamily: "Arial",
@@ -282,7 +298,7 @@ export default class RoguelikeScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(UI_CONSTANTS.Z_INDEX.HUD);
 
-    this.minimapContainer = this.add.container(width - 208, 150);
+    this.minimapContainer = this.add.container(width - 386, 120);
     this.minimapContainer.setDepth(UI_CONSTANTS.Z_INDEX.HUD);
   }
 
@@ -309,15 +325,6 @@ export default class RoguelikeScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(UI_CONSTANTS.Z_INDEX.HUD);
-
-    this.cookingButtonDesc = this.add
-      .text(width - 150, height - 20, "레시피 게임을 팝업으로 실행", {
-        fontSize: UI_CONSTANTS.COOKING_DESC_FONT_SIZE,
-        color: COLORS.TEXT_SECONDARY,
-        fontFamily: "Arial",
-      })
-      .setOrigin(0.5)
-      .setDepth(UI_CONSTANTS.Z_INDEX.UI);
   }
 
   // ===========================================
@@ -551,18 +558,35 @@ export default class RoguelikeScene extends Phaser.Scene {
     const visible = gameState.visible[y][x];
     const mapValue = gameState.map[y][x];
 
-    const color = this.getTileColor(mapValue, seen, visible);
     const screenX = x * tileSize;
     const screenY = y * tileSize;
 
-    const tile = this.add.rectangle(
-      screenX,
-      screenY,
-      tileSize,
-      tileSize,
-      color
-    );
-    this.mapContainer.add(tile);
+    // 바닥 타일인 경우 이미지 사용
+    if (mapValue === TILE_TYPES.FLOOR && (visible || seen)) {
+      const groundSprite = this.add
+        .image(screenX, screenY, "ground")
+        .setOrigin(0.5)
+        .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+      this.mapContainer.add(groundSprite);
+    } else if (mapValue === TILE_TYPES.WALL && seen) {
+      // 벽 타일인 경우 이미지 사용
+      const wallSprite = this.add
+        .image(screenX, screenY, "wall-top")
+        .setOrigin(0.5)
+        .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+      this.mapContainer.add(wallSprite);
+    } else {
+      // 다른 타일들은 기존 방식으로 렌더링
+      const color = this.getTileColor(mapValue, seen, visible);
+      const tile = this.add.rectangle(
+        screenX,
+        screenY,
+        tileSize,
+        tileSize,
+        color
+      );
+      this.mapContainer.add(tile);
+    }
 
     // 계단 표시
     if (mapValue === TILE_TYPES.STAIRS && (visible || seen)) {
@@ -711,6 +735,13 @@ export default class RoguelikeScene extends Phaser.Scene {
 
     if (enemy.type === "slime") {
       enemySprite = this.createSlimeSprite(enemy, screenX, screenY, tileSize);
+    } else if (enemy.type === "goblin") {
+      enemySprite = this.createGlowMushroomSprite(
+        enemy,
+        screenX,
+        screenY,
+        tileSize
+      );
     } else {
       enemySprite = this.createEnemyTextSprite(enemy, screenX, screenY);
     }
@@ -726,6 +757,20 @@ export default class RoguelikeScene extends Phaser.Scene {
       enemy.facing === "left" ? "rabbit-left" : "rabbit-right";
     return this.add
       .image(screenX, screenY, rabbitImageKey)
+      .setOrigin(0.5)
+      .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+  }
+
+  /**
+   * 형광 버섯(고블린) 스프라이트 생성
+   */
+  createGlowMushroomSprite(enemy, screenX, screenY, tileSize) {
+    const glowMushroomImageKey =
+      enemy.facing === "left"
+        ? "glow-mushroom-mob-left"
+        : "glow-mushroom-mob-right";
+    return this.add
+      .image(screenX, screenY, glowMushroomImageKey)
       .setOrigin(0.5)
       .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
   }
@@ -852,19 +897,38 @@ export default class RoguelikeScene extends Phaser.Scene {
     const visible = gameState.visible[y][x];
     const mapValue = gameState.map[y][x];
 
-    const color = this.getTileColor(mapValue, seen, visible);
     const minimapX = x * config.tileSize + config.offsetX;
     const minimapY = y * config.tileSize + config.offsetY;
 
-    const tile = this.add.rectangle(
-      0,
-      0,
-      config.tileSize,
-      config.tileSize,
-      color
-    );
-    tile.setPosition(minimapX, minimapY);
-    this.minimapContainer.add(tile);
+    // 바닥 타일인 경우 이미지 사용
+    if (mapValue === TILE_TYPES.FLOOR && (visible || seen)) {
+      const groundSprite = this.add
+        .image(0, 0, "ground")
+        .setOrigin(0.5)
+        .setScale(config.tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+      groundSprite.setPosition(minimapX, minimapY);
+      this.minimapContainer.add(groundSprite);
+    } else if (mapValue === TILE_TYPES.WALL && seen) {
+      // 벽 타일인 경우 이미지 사용
+      const wallSprite = this.add
+        .image(0, 0, "wall-top")
+        .setOrigin(0.5)
+        .setScale(config.tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+      wallSprite.setPosition(minimapX, minimapY);
+      this.minimapContainer.add(wallSprite);
+    } else {
+      // 다른 타일들은 기존 방식으로 렌더링
+      const color = this.getTileColor(mapValue, seen, visible);
+      const tile = this.add.rectangle(
+        0,
+        0,
+        config.tileSize,
+        config.tileSize,
+        color
+      );
+      tile.setPosition(minimapX, minimapY);
+      this.minimapContainer.add(tile);
+    }
 
     // 계단 표시
     if (mapValue === TILE_TYPES.STAIRS && (visible || seen)) {
