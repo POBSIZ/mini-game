@@ -78,10 +78,12 @@ export class BaseScene extends Phaser.Scene {
    * @returns {Phaser.GameObjects.Text} 생성된 텍스트 객체
    */
   createText(x, y, text, style = {}) {
+    const devicePixelRatio = window.devicePixelRatio || 1;
     const defaultStyle = {
       fontFamily: UI_CONFIG.FONTS.DEFAULT,
       fontSize: UI_CONFIG.FONTS.SIZES.MEDIUM,
       color: UI_CONFIG.COLORS.TEXT,
+      resolution: devicePixelRatio,
       ...style,
     };
 
@@ -121,7 +123,7 @@ export class BaseScene extends Phaser.Scene {
       color: defaultStyle.textColor,
     }).setOrigin(0.5);
 
-    button.setInteractive({ useHandCursor: true });
+    button.setInteractive();
     button.on("pointerdown", callback);
 
     // 호버 효과
@@ -225,6 +227,14 @@ export class BaseScene extends Phaser.Scene {
       });
     });
     this.eventListeners.clear();
+  }
+
+  /**
+   * 화면 크기 변경 처리 (하위 클래스에서 오버라이드)
+   * @param {Object} gameSize - 새로운 게임 크기
+   */
+  handleResize(gameSize) {
+    // 하위 클래스에서 구현
   }
 
   /**

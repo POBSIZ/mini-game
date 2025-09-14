@@ -40,6 +40,7 @@ export class RoguelikeGameLogic extends BaseGameLogic {
       map: [],
       seen: [],
       visible: [],
+      brightness: [], // 바닥 타일의 명도 정보 (0.0 ~ 1.0)
       player: {
         x: 0,
         y: 0,
@@ -85,6 +86,9 @@ export class RoguelikeGameLogic extends BaseGameLogic {
     );
     this.gameState.visible = Array.from({ length: VIEW_HEIGHT }, () =>
       Array(VIEW_WIDTH).fill(false)
+    );
+    this.gameState.brightness = Array.from({ length: VIEW_HEIGHT }, () =>
+      Array(VIEW_WIDTH).fill(0.0)
     );
     this.gameState.enemies = [];
     this.gameState.items = [];
@@ -397,10 +401,16 @@ export class RoguelikeGameLogic extends BaseGameLogic {
     const px = this.gameState.player.x;
     const py = this.gameState.player.y;
 
-    // 모든 타일을 보이지 않음으로 설정
+    // 모든 타일을 보이지 않음으로 설정하고 명도 초기화
     for (let y = 0; y < ROGUELIKE_CONFIG.VIEW_HEIGHT; y++) {
       for (let x = 0; x < ROGUELIKE_CONFIG.VIEW_WIDTH; x++) {
         this.gameState.visible[y][x] = false;
+        // 이미 본 곳은 어둡게 유지 (0.3), 새로운 곳은 완전히 어둡게 (0.0)
+        if (!this.gameState.seen[y][x]) {
+          this.gameState.brightness[y][x] = 0.0;
+        } else {
+          this.gameState.brightness[y][x] = 0.3;
+        }
       }
     }
 
@@ -417,11 +427,16 @@ export class RoguelikeGameLogic extends BaseGameLogic {
 
         const dx = x - px;
         const dy = y - py;
-        if (dx * dx + dy * dy > FOV_RADIUS * FOV_RADIUS) continue;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > FOV_RADIUS) continue;
 
         if (this.hasLineOfSight(px, py, x, y)) {
           this.gameState.visible[y][x] = true;
           this.gameState.seen[y][x] = true;
+          
+          // 거리에 따른 명도 계산 (가까울수록 밝음)
+          const brightness = Math.max(0.0, 1.0 - (distance / FOV_RADIUS) * 0.7);
+          this.gameState.brightness[y][x] = brightness;
         }
       }
     }
@@ -762,8 +777,8 @@ export class RoguelikeGameLogic extends BaseGameLogic {
   checkGameOver() {
     if (this.gameState.player.hp <= 0) {
       this.gameState.player.hp = 0;
-      this.gameState.gameOver = true;
       this.addMessage("당신은 쓰러졌습니다... R 키로 재시작하세요.", true);
+      this.setGameOver(true, "defeat");
     }
   }
 
@@ -788,7 +803,7 @@ export class RoguelikeGameLogic extends BaseGameLogic {
         "당신은 최심부에서 살아남아 탈출했습니다. 승리! 🏆",
         true
       );
-      this.gameState.gameOver = true;
+      this.setGameOver(true, "victory");
       return true;
     }
 

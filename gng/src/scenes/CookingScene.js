@@ -134,14 +134,6 @@ export default class CookingScene extends BaseScene {
   }
 
   /**
-   * 게임 로직을 초기화합니다.
-   * @private
-   */
-  initializeGameLogic() {
-    this.gameLogic = new CookingGameLogic();
-  }
-
-  /**
    * 게임 상태를 초기화합니다.
    * @private
    */
@@ -151,14 +143,44 @@ export default class CookingScene extends BaseScene {
   }
 
   create() {
+    console.log("CookingScene create() 시작");
     const { width, height } = this.scale;
 
+    // UI 생성 복원
     this.createOverlay(width, height);
     this.createPopupContainer(width, height);
     this.createPopupBackground();
     this.createCloseButton();
     this.createPopupUI();
+
+    // this.createTestButtons(); // 테스트 버튼 제거
+    // this.setupGlobalInputListeners(); // 전역 입력 리스너 제거
     this.startGame();
+
+    // 화면 크기 변경 이벤트 리스너 설정
+    this.scale.on("resize", this.handleResize, this);
+
+    console.log("CookingScene create() 완료");
+  }
+
+  /**
+   * 화면 크기 변경 처리
+   * @param {Object} gameSize - 새로운 게임 크기
+   * @private
+   */
+  handleResize(gameSize) {
+    console.log("CookingScene 화면 크기 변경:", gameSize);
+    const { width, height } = this.scale;
+
+    // 팝업 컨테이너 위치 재조정
+    if (this.popupContainer) {
+      this.popupContainer.setPosition(width / 2, height / 2);
+    }
+
+    // 오버레이 크기 재조정
+    if (this.overlay) {
+      this.overlay.setSize(width, height);
+    }
   }
 
   /**
@@ -186,6 +208,7 @@ export default class CookingScene extends BaseScene {
    */
   createPopupContainer(width, height) {
     this.popupContainer = this.add.container(width / 2, height / 2);
+    this.popupContainer.setDepth(999); // 높은 depth 설정
   }
 
   /**
@@ -213,31 +236,53 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   createCloseButton() {
+    console.log("닫기 버튼 생성 시작");
+    const { width, height } = this.scale;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // 화면 우상단에 닫기 버튼 배치
     this.closeButton = this.add.rectangle(
-      350,
-      -280,
+      centerX + 300,
+      centerY - 200,
       COOKING_UI_CONSTANTS.BUTTONS.CLOSE_SIZE,
       COOKING_UI_CONSTANTS.BUTTONS.CLOSE_SIZE,
       COOKING_UI_CONSTANTS.COLORS.CLOSE_BUTTON
     );
     this.closeButton.setInteractive();
-    this.closeButton.on("pointerdown", () => this.closePopup());
-    this.closeButton.on("pointerover", () =>
-      this.closeButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_HOVER)
+    this.closeButton.setDepth(10000); // 매우 높은 depth 설정
+    // 클릭 영역을 더 크게 설정
+    this.closeButton.setSize(
+      COOKING_UI_CONSTANTS.BUTTONS.CLOSE_SIZE + 40,
+      COOKING_UI_CONSTANTS.BUTTONS.CLOSE_SIZE + 40
     );
-    this.closeButton.on("pointerout", () =>
-      this.closeButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_BUTTON)
-    );
-    this.popupContainer.add(this.closeButton);
+    this.closeButton.on("pointerdown", () => {
+      console.log("닫기 버튼 클릭됨!");
+      this.closePopup();
+    });
+    this.closeButton.on("pointerover", () => {
+      console.log("닫기 버튼에 마우스 호버됨");
+      this.closeButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_HOVER);
+    });
+    this.closeButton.on("pointerout", () => {
+      console.log("닫기 버튼에서 마우스 벗어남");
+      this.closeButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_BUTTON);
+    });
+    // popupContainer에 추가하지 않고 직접 화면에 추가
+    // this.popupContainer.add(this.closeButton);
+    console.log("닫기 버튼 생성 완료");
 
     const closeXText = this.add
-      .text(350, -280, "×", {
+      .text(centerX + 300, centerY - 200, "×", {
         fontSize: "20px",
         color: "#ffffff",
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(closeXText);
+    closeXText.setDepth(10001); // 버튼보다 높은 depth
+    closeXText.disableInteractive(); // 텍스트가 클릭을 방해하지 않도록
+    // popupContainer에 추가하지 않고 직접 화면에 추가
+    // this.popupContainer.add(closeXText);
   }
 
   // ===========================================
@@ -500,33 +545,165 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   createCookButton() {
+    console.log("조리하기 버튼 생성 시작");
     const { COOK_WIDTH, COOK_HEIGHT } = COOKING_UI_CONSTANTS.BUTTONS;
+    const { width, height } = this.scale;
 
+    // 화면 중앙 기준으로 버튼 배치
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // 버튼을 화면 중앙 하단에 배치
     this.cookButton = this.add.rectangle(
-      0,
-      150,
+      centerX,
+      centerY + 100, // 화면 중앙에서 아래로 100픽셀
       COOK_WIDTH,
       COOK_HEIGHT,
       COOKING_UI_CONSTANTS.COLORS.COOK_BUTTON
     );
     this.cookButton.setInteractive();
-    this.cookButton.on("pointerdown", () => this.cookDish());
-    this.cookButton.on("pointerover", () =>
-      this.cookButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_HOVER)
-    );
-    this.cookButton.on("pointerout", () =>
-      this.cookButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_BUTTON)
-    );
-    this.popupContainer.add(this.cookButton);
+    this.cookButton.setDepth(10000); // 매우 높은 depth 설정
+    // 클릭 영역을 더 크게 설정
+    this.cookButton.setSize(COOK_WIDTH + 40, COOK_HEIGHT + 40);
+    this.cookButton.on("pointerdown", () => {
+      console.log("조리하기 버튼 클릭됨!");
+      this.cookDish();
+    });
+    this.cookButton.on("pointerover", () => {
+      console.log("조리하기 버튼에 마우스 호버됨");
+      this.cookButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_HOVER);
+    });
+    this.cookButton.on("pointerout", () => {
+      console.log("조리하기 버튼에서 마우스 벗어남");
+      this.cookButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_BUTTON);
+    });
+    // popupContainer에 추가하지 않고 직접 화면에 추가
+    // this.popupContainer.add(this.cookButton);
+    console.log("조리하기 버튼 생성 완료");
 
     const cookText = this.add
-      .text(0, 150, "조리하기", {
+      .text(centerX, centerY + 100, "조리하기", {
         fontSize: COOKING_UI_CONSTANTS.FONTS.LARGE,
         color: "#ffffff",
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(cookText);
+    cookText.setDepth(10001); // 버튼보다 높은 depth
+    cookText.disableInteractive(); // 텍스트가 클릭을 방해하지 않도록
+    // popupContainer에 추가하지 않고 직접 화면에 추가
+    // this.popupContainer.add(cookText);
+  }
+
+  /**
+   * 테스트용 간단한 버튼들을 생성합니다.
+   * @private
+   */
+  createTestButtons() {
+    console.log("테스트 버튼 생성 시작");
+
+    const { width, height } = this.scale;
+    console.log("화면 크기:", width, height);
+    console.log("화면 중앙:", width / 2, height / 2);
+
+    // 화면 중앙 기준으로 버튼 배치
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // 화면 중앙에서 좌우로 200픽셀 떨어진 위치에 버튼 배치
+    const testButton1 = this.add.rectangle(
+      centerX - 200,
+      centerY,
+      150,
+      60,
+      0xff0000
+    );
+    testButton1.setInteractive();
+    testButton1.setDepth(20000);
+
+    console.log("테스트 버튼 1 위치:", testButton1.x, testButton1.y);
+    console.log("테스트 버튼 1 크기:", testButton1.width, testButton1.height);
+
+    testButton1.on("pointerdown", (pointer) => {
+      console.log("테스트 버튼 1 클릭됨!", pointer.x, pointer.y);
+      alert("테스트 버튼 1이 클릭되었습니다!");
+    });
+    testButton1.on("pointerover", () => {
+      console.log("테스트 버튼 1에 호버됨");
+      testButton1.setFillStyle(0xff6666);
+    });
+    testButton1.on("pointerout", () => {
+      console.log("테스트 버튼 1에서 벗어남");
+      testButton1.setFillStyle(0xff0000);
+    });
+
+    // 두 번째 테스트 버튼
+    const testButton2 = this.add.rectangle(
+      centerX + 200,
+      centerY,
+      150,
+      60,
+      0x0000ff
+    );
+    testButton2.setInteractive();
+    testButton2.setDepth(20000);
+
+    console.log("테스트 버튼 2 위치:", testButton2.x, testButton2.y);
+    console.log("테스트 버튼 2 크기:", testButton2.width, testButton2.height);
+
+    testButton2.on("pointerdown", (pointer) => {
+      console.log("테스트 버튼 2 클릭됨!", pointer.x, pointer.y);
+      alert("테스트 버튼 2가 클릭되었습니다!");
+    });
+    testButton2.on("pointerover", () => {
+      console.log("테스트 버튼 2에 호버됨");
+      testButton2.setFillStyle(0x6666ff);
+    });
+    testButton2.on("pointerout", () => {
+      console.log("테스트 버튼 2에서 벗어남");
+      testButton2.setFillStyle(0x0000ff);
+    });
+
+    console.log("테스트 버튼 생성 완료");
+  }
+
+  /**
+   * 전역 입력 리스너를 설정합니다.
+   * @private
+   */
+  setupGlobalInputListeners() {
+    console.log("전역 입력 리스너 설정 시작");
+
+    // 전역 마우스 이벤트
+    this.input.on("pointerdown", (pointer) => {
+      console.log("전역 마우스 클릭 감지:", pointer.x, pointer.y);
+    });
+
+    this.input.on("pointerup", (pointer) => {
+      console.log("전역 마우스 릴리즈 감지:", pointer.x, pointer.y);
+    });
+
+    this.input.on("pointermove", (pointer) => {
+      // 너무 많은 로그를 방지하기 위해 가끔만 출력
+      if (Math.random() < 0.01) {
+        console.log("전역 마우스 이동 감지:", pointer.x, pointer.y);
+      }
+    });
+
+    // 키보드 이벤트
+    this.input.keyboard.on("keydown", (event) => {
+      console.log("키보드 입력 감지:", event.key);
+    });
+
+    // 브라우저 DOM 이벤트도 테스트
+    document.addEventListener("click", (event) => {
+      console.log("DOM 클릭 이벤트 감지:", event.clientX, event.clientY);
+    });
+
+    document.addEventListener("mousedown", (event) => {
+      console.log("DOM 마우스 다운 이벤트 감지:", event.clientX, event.clientY);
+    });
+
+    console.log("전역 입력 리스너 설정 완료");
   }
 
   // ===========================================
@@ -537,7 +714,13 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   startGame() {
-    this.gameLogic.startGame();
+    console.log("startGame() 메서드 호출됨");
+    try {
+      this.gameLogic.startGame();
+      console.log("게임 로직 시작 완료");
+    } catch (error) {
+      console.error("게임 시작 중 오류:", error);
+    }
   }
 
   /**
@@ -717,15 +900,26 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   cookDish() {
+    console.log("cookDish() 메서드 호출됨");
     try {
       const gameState = this.gameLogic.getGameState();
-      if (gameState.gameEnded) return;
+      console.log("현재 게임 상태:", gameState);
 
-      if (this.gameLogic.getCurrentPlate().length === 0) {
+      if (gameState.gameEnded) {
+        console.log("게임이 이미 종료됨");
+        return;
+      }
+
+      const currentPlate = this.gameLogic.getCurrentPlate();
+      console.log("현재 접시 상태:", currentPlate);
+
+      if (currentPlate.length === 0) {
+        console.log("접시가 비어있음");
         this.addMessage("재료를 선택해주세요!");
         return;
       }
 
+      console.log("조리 과정 시작");
       this.showCookingProcess();
     } catch (error) {
       console.error("조리 중 오류:", error);
@@ -880,11 +1074,29 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   handleCookingSuccess(result) {
-    this.addDishToRoguelikeInventory(
-      result.dishName,
-      result.score,
-      this.gameLogic.getCurrentRecipe()
-    );
+    // 이벤트를 통해 RoguelikeScene에서 인벤토리 추가 처리
+    this.events.emit("dishCreated", {
+      type: "cooked_food",
+      name: result.dishName,
+      symbol: "🍽️",
+      color: 0xf59e0b,
+      description: `맛있는 요리! 배고픔 +${Math.max(
+        1,
+        Math.floor(result.score / 10)
+      )}, HP +${Math.max(1, Math.floor(result.score / 15))}`,
+      hunger: [
+        Math.max(1, Math.floor(result.score / 10)),
+        Math.max(1, Math.floor(result.score / 10)),
+      ],
+      hp: [
+        Math.max(1, Math.floor(result.score / 15)),
+        Math.max(1, Math.floor(result.score / 15)),
+      ],
+      value: Math.max(1, Math.floor(result.score / 5)),
+      isSpecial: this.gameLogic.getCurrentRecipe() !== null,
+      recipe: this.gameLogic.getCurrentRecipe(),
+      score: result.score,
+    });
     this.showResult(result.score, result.dishName);
   }
 
@@ -1150,9 +1362,18 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   closePopup() {
+    console.log("closePopup() 메서드 호출됨");
+    console.log("팝업 닫기 시작");
     try {
+      // RoguelikeScene에 요리 완료 이벤트 전달 (선택사항)
+      console.log("popupClosed 이벤트 발생");
       this.events.emit("popupClosed");
+
+      // CookingScene 종료
+      console.log("CookingScene 종료 중");
       this.scene.stop();
+
+      console.log("팝업 닫기 완료");
     } catch (error) {
       console.error("팝업 닫기 중 오류:", error);
     }
@@ -1168,62 +1389,24 @@ export default class CookingScene extends BaseScene {
   }
 
   // ===========================================
-  // 인벤토리 연동
+  // 인벤토리 연동 (이벤트 기반으로 처리)
   // ===========================================
+
   /**
-   * 요리를 로그라이크 인벤토리에 추가합니다.
-   * @param {string} dishName - 요리 이름
-   * @param {number} score - 요리 점수
-   * @param {Object|null} recipe - 레시피 정보
+   * 메시지 표시를 업데이트합니다.
    * @private
    */
-  addDishToRoguelikeInventory(dishName, score, recipe) {
-    try {
-      const dishItem = this.createDishItem(dishName, score, recipe);
-      this.events.emit("dishCreated", dishItem);
-      console.log(`요리 "${dishName}"이 로그라이크 인벤토리에 추가되었습니다.`);
-    } catch (error) {
-      console.error("인벤토리 추가 중 오류:", error);
-    }
+  updateMessageDisplay() {
+    // 메시지 표시 로직 (필요시 구현)
   }
 
   /**
-   * 요리 아이템 데이터를 생성합니다.
-   * @param {string} dishName - 요리 이름
-   * @param {number} score - 요리 점수
-   * @param {Object|null} recipe - 레시피 정보
-   * @returns {Object} 로그라이크 아이템 형태의 요리 데이터
+   * 요리 완료를 처리합니다.
+   * @param {Object} data - 요리 완료 데이터
    * @private
    */
-  createDishItem(dishName, score, recipe) {
-    const effects = this.calculateDishEffects(score);
-
-    return {
-      type: "cooked_food",
-      name: dishName,
-      symbol: "🍽️",
-      color: 0xf59e0b,
-      description: `맛있는 요리! 배고픔 +${effects.hungerRestore}, HP +${effects.hpRestore}`,
-      hunger: [effects.hungerRestore, effects.hungerRestore],
-      hp: [effects.hpRestore, effects.hpRestore],
-      value: Math.max(1, Math.floor(score / 5)),
-      isSpecial: recipe !== null,
-      recipe: recipe,
-      score: score,
-    };
-  }
-
-  /**
-   * 요리 효과를 계산합니다.
-   * @param {number} score - 요리 점수
-   * @returns {Object} 효과 정보
-   * @private
-   */
-  calculateDishEffects(score) {
-    return {
-      hungerRestore: Math.max(20, Math.min(80, score * 2)),
-      hpRestore: Math.max(5, Math.min(25, Math.floor(score / 2))),
-    };
+  handleCookingEnd(data) {
+    // 요리 완료 처리 로직 (필요시 구현)
   }
 
   /**

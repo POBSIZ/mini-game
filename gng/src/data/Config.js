@@ -20,10 +20,10 @@ export const ROGUELIKE_CONFIG = {
   START_HP: 24,
   HUNGER_MAX: 100,
   HUNGER_WARN: 40,
-  TILE_SIZE: 200,
-  // 화면에 보이는 타일 수 (카메라용)
-  SCREEN_WIDTH: 20,
-  SCREEN_HEIGHT: 15,
+  TILE_SIZE: 1000,
+  // 화면에 보이는 타일 수 (카메라용) - 더 넓은 시야를 위해 확장
+  SCREEN_WIDTH: 50,
+  SCREEN_HEIGHT: 30,
 };
 
 // UI 설정
@@ -42,11 +42,11 @@ export const UI_CONFIG = {
   FONTS: {
     DEFAULT: "Arial",
     SIZES: {
-      SMALL: "10px",
-      MEDIUM: "12px",
-      LARGE: "14px",
-      XLARGE: "16px",
-      TITLE: "24px",
+      SMALL: "14px",
+      MEDIUM: "16px",
+      LARGE: "18px",
+      XLARGE: "20px",
+      TITLE: "28px",
     },
   },
   SPACING: {

@@ -4,7 +4,7 @@
  */
 
 import { EventManager } from "./EventManager.js";
-import { GAME_EVENTS, GAME_STATES } from "../data/Config.js";
+import { GAME_EVENTS } from "../data/Config.js";
 import { isValidGameState } from "../data/Validation.js";
 
 export class BaseGameLogic {
@@ -23,6 +23,15 @@ export class BaseGameLogic {
   }
 
   /**
+   * 게임 상태 검증 (하위 클래스에서 오버라이드 가능)
+   * @param {Object} gameState - 검증할 게임 상태
+   * @returns {boolean} 유효성 여부
+   */
+  validateGameState(gameState) {
+    return isValidGameState(gameState);
+  }
+
+  /**
    * 게임 초기화
    */
   init() {
@@ -33,12 +42,12 @@ export class BaseGameLogic {
 
     this.gameState = this.initializeGameState();
 
-    if (!isValidGameState(this.gameState)) {
+    if (!this.validateGameState(this.gameState)) {
       throw new Error("유효하지 않은 게임 상태입니다.");
     }
 
     this.isInitialized = true;
-    this.emit(GAME_EVENTS.GAME_OVER, { reason: "init" });
+    // 초기화 시에는 이벤트를 발생시키지 않음 (하위 클래스에서 필요시 처리)
   }
 
   /**
@@ -47,7 +56,7 @@ export class BaseGameLogic {
   reset() {
     this.gameState = this.initializeGameState();
     this.isInitialized = true;
-    this.emit(GAME_EVENTS.GAME_OVER, { reason: "reset" });
+    // 게임 재시작 시에는 GAME_OVER 이벤트를 발생시키지 않음
   }
 
   /**
@@ -66,7 +75,7 @@ export class BaseGameLogic {
    * @param {Object} newState - 새로운 게임 상태
    */
   setGameState(newState) {
-    if (!isValidGameState(newState)) {
+    if (!this.validateGameState(newState)) {
       throw new Error("유효하지 않은 게임 상태입니다.");
     }
     this.gameState = { ...newState };
@@ -83,7 +92,7 @@ export class BaseGameLogic {
 
     const newState = { ...this.gameState, ...updates };
 
-    if (!isValidGameState(newState)) {
+    if (!this.validateGameState(newState)) {
       throw new Error("유효하지 않은 게임 상태 업데이트입니다.");
     }
 

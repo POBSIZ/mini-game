@@ -79,7 +79,7 @@ export function isValidExp(exp) {
  */
 export function isValidItem(item) {
   if (!item || typeof item !== "object") return false;
-  
+
   return (
     typeof item.id === "string" &&
     typeof item.name === "string" &&
@@ -96,7 +96,7 @@ export function isValidItem(item) {
  */
 export function isValidEnemy(enemy) {
   if (!enemy || typeof enemy !== "object") return false;
-  
+
   return (
     typeof enemy.id === "string" &&
     typeof enemy.type === "string" &&
@@ -113,7 +113,7 @@ export function isValidEnemy(enemy) {
  */
 export function isValidPlayer(player) {
   if (!player || typeof player !== "object") return false;
-  
+
   return (
     typeof player.x === "number" &&
     typeof player.y === "number" &&
@@ -134,7 +134,7 @@ export function isValidPlayer(player) {
  */
 export function isValidGameState(gameState) {
   if (!gameState || typeof gameState !== "object") return false;
-  
+
   return (
     typeof gameState.level === "number" &&
     gameState.level > 0 &&
@@ -154,7 +154,7 @@ export function isValidGameState(gameState) {
  */
 export function isValidIngredient(ingredient) {
   if (!ingredient || typeof ingredient !== "object") return false;
-  
+
   return (
     typeof ingredient.id === "string" &&
     typeof ingredient.name === "string" &&
@@ -172,7 +172,7 @@ export function isValidIngredient(ingredient) {
  */
 export function isValidPalate(palate) {
   if (!palate || typeof palate !== "object") return false;
-  
+
   return (
     typeof palate.id === "string" &&
     typeof palate.name === "string" &&
@@ -188,7 +188,7 @@ export function isValidPalate(palate) {
  */
 export function isValidRecipe(recipe) {
   if (!recipe || typeof recipe !== "object") return false;
-  
+
   return (
     typeof recipe.id === "string" &&
     typeof recipe.name === "string" &&
@@ -211,6 +211,24 @@ export function validateArray(array, validator) {
 }
 
 /**
+ * 요리 게임 상태 객체가 유효한지 검증
+ * @param {Object} gameState - 검증할 게임 상태 객체
+ * @returns {boolean} 유효성 여부
+ */
+export function isValidCookingGameState(gameState) {
+  if (!gameState || typeof gameState !== "object") return false;
+
+  return (
+    Array.isArray(gameState.currentPlate) &&
+    typeof gameState.score === "number" &&
+    typeof gameState.timeLeft === "number" &&
+    typeof gameState.gameStarted === "boolean" &&
+    typeof gameState.gameEnded === "boolean" &&
+    Array.isArray(gameState.messages)
+  );
+}
+
+/**
  * 객체의 필수 속성이 모두 존재하는지 검증
  * @param {Object} obj - 검증할 객체
  * @param {Array} requiredKeys - 필수 키 배열
@@ -218,5 +236,5 @@ export function validateArray(array, validator) {
  */
 export function hasRequiredKeys(obj, requiredKeys) {
   if (!obj || typeof obj !== "object") return false;
-  return requiredKeys.every(key => key in obj);
+  return requiredKeys.every((key) => key in obj);
 }

@@ -13,12 +13,27 @@ const config = {
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+    min: { width: 7680, height: 4320 },
+    max: { width: 7680, height: 4320 },
+  },
+  render: {
+    pixelArt: true,
+    antialias: true,
+    antialiasGL: true,
   },
   physics: {
     default: "arcade",
     arcade: {
-      debug: true,
+      debug: false,
     },
+  },
+  input: {
+    activePointers: 3,
+    smoothFactor: 0.5,
+    gamepad: false,
+    keyboard: true,
+    mouse: true, // 마우스 입력 복원
+    touch: true, // 터치 입력 복원
   },
   scene: [RoguelikeScene, CookingScene],
 };

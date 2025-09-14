@@ -16,24 +16,31 @@ const UI_CONSTANTS = {
   INVENTORY_FONT_SIZE: UI_CONFIG.FONTS.SIZES.LARGE,
   TILE_FONT_SIZE: "48px",
   MINIMAP_FONT_SIZE: UI_CONFIG.FONTS.SIZES.LARGE,
-  COOKING_BUTTON_WIDTH: 120,
-  COOKING_BUTTON_HEIGHT: 40,
+  COOKING_BUTTON_WIDTH: 200,
+  COOKING_BUTTON_HEIGHT: 60,
   MINIMAP_WIDTH: 400,
   MINIMAP_HEIGHT: 300,
   MINIMAP_TILE_WIDTH: 360,
   MINIMAP_TILE_HEIGHT: 260,
   COOKING_DESC_FONT_SIZE: UI_CONFIG.FONTS.SIZES.SMALL,
   IMAGE_SCALE_FACTOR: 3000, // 3000x3000 이미지 크기 기준
+  HIGH_DPI_SCALE: Math.max(1, window.devicePixelRatio || 1), // 고해상도 디스플레이 대응
   MINIMAP_SCALE_FACTORS: {
     STAIRS: 0.6,
     ITEM: 0.4,
     PLAYER: 0.6,
   },
+  CHARACTER_SCALE_FACTOR: 1.0, // 캐릭터 크기 조정 (1타일과 동일)
+  MONSTER_SCALE_FACTOR: 1.0, // 몬스터 크기 조정 (1타일과 동일)
+  ITEM_SCALE_FACTOR: 0.8, // 아이템 크기 조정 (약간 작게)
+  TILE_SCALE_FACTOR: 1.0, // 타일 크기 조정 (기준 크기)
   Z_INDEX: {
     UI: 1000,
     HUD: 1001,
     INVENTORY: 2000,
     INVENTORY_TEXT: 2001,
+    GAME_OVER: 5000,
+    GAME_OVER_TEXT: 5001,
   },
 };
 
@@ -51,8 +58,9 @@ const COLORS = {
   FLOOR_SEEN: 0x0b1220,
   STAIRS: UI_CONFIG.COLORS.WARNING,
   ENEMY: UI_CONFIG.COLORS.DANGER,
-  COOKING_BUTTON: UI_CONFIG.COLORS.SUCCESS,
-  COOKING_BUTTON_TEXT: "#0b0d10",
+  COOKING_BUTTON: 0xff6b35, // 밝은 주황색 (더 눈에 띄게)
+  COOKING_BUTTON_HOVER: 0xff8c42, // 호버 시 더 밝은 주황색
+  COOKING_BUTTON_TEXT: "#ffffff", // 흰색 텍스트로 가독성 향상
 };
 
 export default class RoguelikeScene extends BaseScene {
@@ -89,6 +97,10 @@ export default class RoguelikeScene extends BaseScene {
     this.escKey = null;
     this.descendKey = null;
     this.numberKeys = {};
+
+    // 이동 입력 지연 처리
+    this.lastMoveTime = 0;
+    this.moveDelay = 150; // 150ms 지연
   }
 
   preload() {
@@ -141,17 +153,52 @@ export default class RoguelikeScene extends BaseScene {
    * @private
    */
   showVictoryScreen() {
+    // 기존 게임오버 UI 정리
+    this.clearGameOverUI();
+
+    // 배경 오버레이 생성
+    const overlay = this.add
+      .rectangle(
+        this.cameras.main.centerX,
+        this.cameras.main.centerY,
+        this.scale.width,
+        this.scale.height,
+        0x000000,
+        0.8
+      )
+      .setDepth(UI_CONSTANTS.Z_INDEX.GAME_OVER);
+
+    // 승리 텍스트 생성
     const victoryText = this.createText(
       this.cameras.main.centerX,
-      this.cameras.main.centerY,
+      this.cameras.main.centerY - 50,
       "승리! 🏆",
       {
         fontSize: UI_CONFIG.FONTS.SIZES.TITLE,
         color: UI_CONFIG.COLORS.SUCCESS,
       }
-    ).setOrigin(0.5);
+    )
+      .setOrigin(0.5)
+      .setDepth(UI_CONSTANTS.Z_INDEX.GAME_OVER_TEXT);
 
-    this.registerUIElement("victory", victoryText);
+    // 안내 텍스트 생성
+    const instructionText = this.createText(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY + 50,
+      "R 키를 눌러 다시 시작하세요",
+      {
+        fontSize: UI_CONFIG.FONTS.SIZES.LARGE,
+        color: UI_CONFIG.COLORS.TEXT,
+      }
+    )
+      .setOrigin(0.5)
+      .setDepth(UI_CONSTANTS.Z_INDEX.GAME_OVER_TEXT);
+
+    this.registerUIElement("victory", {
+      overlay,
+      victoryText,
+      instructionText,
+    });
   }
 
   /**
@@ -159,17 +206,150 @@ export default class RoguelikeScene extends BaseScene {
    * @private
    */
   showGameOverScreen() {
+    // 기존 게임오버 UI 정리
+    this.clearGameOverUI();
+
+    // 배경 오버레이 생성
+    const overlay = this.add
+      .rectangle(
+        this.cameras.main.centerX,
+        this.cameras.main.centerY,
+        this.scale.width,
+        this.scale.height,
+        0x000000,
+        0.8
+      )
+      .setDepth(UI_CONSTANTS.Z_INDEX.GAME_OVER);
+
+    // 게임오버 텍스트 생성
     const gameOverText = this.createText(
       this.cameras.main.centerX,
-      this.cameras.main.centerY,
-      "게임 오버",
+      this.cameras.main.centerY - 50,
+      "게임 오버 💀",
       {
         fontSize: UI_CONFIG.FONTS.SIZES.TITLE,
         color: UI_CONFIG.COLORS.DANGER,
       }
-    ).setOrigin(0.5);
+    )
+      .setOrigin(0.5)
+      .setDepth(UI_CONSTANTS.Z_INDEX.GAME_OVER_TEXT);
 
-    this.registerUIElement("gameOver", gameOverText);
+    // 안내 텍스트 생성
+    const instructionText = this.createText(
+      this.cameras.main.centerX,
+      this.cameras.main.centerY + 50,
+      "R 키를 눌러 다시 시작하세요",
+      {
+        fontSize: UI_CONFIG.FONTS.SIZES.LARGE,
+        color: UI_CONFIG.COLORS.TEXT,
+      }
+    )
+      .setOrigin(0.5)
+      .setDepth(UI_CONSTANTS.Z_INDEX.GAME_OVER_TEXT);
+
+    this.registerUIElement("gameOver", {
+      overlay,
+      gameOverText,
+      instructionText,
+    });
+  }
+
+  /**
+   * 화면 크기 변경 처리
+   * @param {Object} gameSize - 새로운 게임 크기
+   * @private
+   */
+  handleResize(gameSize) {
+    console.log("화면 크기 변경 감지:", gameSize);
+    const { width, height } = gameSize;
+
+    // UI 요소들 위치 재조정
+    this.updateUIPositions(width, height);
+
+    // 맵 위치 재조정
+    this.updateMapPosition();
+
+    // 미니맵 위치 재조정
+    this.updateMinimapPosition(width, height);
+
+    // 버튼 상호작용 영역 재설정
+    this.refreshButtonInteractions();
+  }
+
+  /**
+   * UI 요소들 위치 업데이트
+   * @param {number} width - 화면 너비
+   * @param {number} height - 화면 높이
+   * @private
+   */
+  updateUIPositions(width, height) {
+    console.log(`UI 위치 업데이트: ${width}x${height}`);
+
+    // HUD 패널 위치 업데이트
+    if (this.hudPanel) {
+      this.hudPanel.setPosition(width / 2, 60);
+    }
+
+    // 메시지 로그 위치 업데이트
+    if (this.messageLog) {
+      this.messageLog.setPosition(20, height - 20);
+    }
+
+    // 인벤토리 패널 위치 업데이트
+    if (this.inventoryPanel) {
+      this.inventoryPanel.setPosition(width - 200, height / 2);
+    }
+
+    // 요리 버튼 완전히 다시 생성
+    if (this.cookingButton) {
+      this.createCookingButtonUI(width, height);
+    }
+  }
+
+  /**
+   * 버튼 상호작용 영역을 재설정합니다.
+   * @private
+   */
+  refreshButtonInteractions() {
+    console.log("버튼 상호작용 영역 재설정");
+
+    // 요리하기 버튼을 완전히 다시 생성
+    const { width, height } = this.scale;
+    this.createCookingButtonUI(width, height);
+  }
+
+  /**
+   * 맵 위치 업데이트
+   * @private
+   */
+  updateMapPosition() {
+    if (!this.mapContainer || !this.gameLogic) {
+      return;
+    }
+
+    const gameState = this.gameLogic.getGameState();
+    const { TILE_SIZE } = ROGUELIKE_CONFIG;
+
+    const offsetX = -gameState.player.x * TILE_SIZE;
+    const offsetY = -gameState.player.y * TILE_SIZE;
+
+    // 맵 컨테이너를 화면 중앙에 위치시키고 오프셋 적용
+    this.mapContainer.setPosition(
+      this.scale.width / 2 + offsetX,
+      this.scale.height / 2 + offsetY
+    );
+  }
+
+  /**
+   * 미니맵 위치 업데이트
+   * @param {number} width - 화면 너비
+   * @param {number} height - 화면 높이
+   * @private
+   */
+  updateMinimapPosition(width, height) {
+    if (this.minimapPanel) {
+      this.minimapPanel.setPosition(width - 220, 20);
+    }
   }
 
   /**
@@ -209,7 +389,16 @@ export default class RoguelikeScene extends BaseScene {
     this.setupInput();
     this.initializeGame();
     this.setupCookingGameListeners();
+
+    // 입력 시스템 재설정 (지연)
+    this.time.delayedCall(200, () => {
+      this.resetInputSystem();
+    });
+
     this.startGame();
+
+    // 화면 크기 변경 이벤트 리스너
+    this.scale.on("resize", this.handleResize, this);
   }
 
   // ===========================================
@@ -328,6 +517,7 @@ export default class RoguelikeScene extends BaseScene {
     this.inventoryPanel.setStrokeStyle(2, COLORS.UI_BORDER);
     this.inventoryPanel.setVisible(false);
     this.inventoryPanel.setDepth(UI_CONSTANTS.Z_INDEX.INVENTORY);
+    // 인벤토리 패널은 상호작용하지 않음 (setInteractive 호출하지 않음)
 
     this.inventoryText = this.add
       .text(width / 2, height / 2, "", {
@@ -361,6 +551,7 @@ export default class RoguelikeScene extends BaseScene {
     );
     this.minimapPanel.setStrokeStyle(1, COLORS.UI_BORDER);
     this.minimapPanel.setDepth(UI_CONSTANTS.Z_INDEX.UI);
+    // 미니맵 패널은 상호작용하지 않음 (setInteractive 호출하지 않음)
 
     this.minimapTitle = this.add
       .text(width - 210, 110, "미니맵", {
@@ -379,25 +570,93 @@ export default class RoguelikeScene extends BaseScene {
    * 요리하기 버튼 UI 생성
    */
   createCookingButtonUI(width, height) {
+    // 기존 버튼이 있다면 제거
+    if (this.cookingButton) {
+      // 상호작용 비활성화 후 제거
+      this.cookingButton.disableInteractive();
+      this.cookingButton.destroy();
+      this.cookingButton = null;
+    }
+    if (this.cookingButtonText) {
+      this.cookingButtonText.destroy();
+      this.cookingButtonText = null;
+    }
+
+    // 미니맵 아래쪽에 배치 (미니맵과 겹치지 않게)
+    const buttonX = width - 110;
+    const buttonY = height - 350;
+
+    console.log(
+      `요리하기 버튼 생성: 위치(${buttonX}, ${buttonY}), 크기(${UI_CONSTANTS.COOKING_BUTTON_WIDTH}x${UI_CONSTANTS.COOKING_BUTTON_HEIGHT})`
+    );
+
+    // 직접 버튼 생성 (createButton 헬퍼 대신)
     this.cookingButton = this.add.rectangle(
-      width - 150,
-      height - 50,
+      buttonX,
+      buttonY,
       UI_CONSTANTS.COOKING_BUTTON_WIDTH,
       UI_CONSTANTS.COOKING_BUTTON_HEIGHT,
       COLORS.COOKING_BUTTON
     );
-    this.cookingButton.setInteractive();
-    this.cookingButton.on("pointerdown", () => this.openCookingGame());
-    this.cookingButton.setDepth(UI_CONSTANTS.Z_INDEX.UI);
 
+    // 테두리 추가
+    this.cookingButton.setStrokeStyle(3, 0xffffff, 1.0);
+
+    // 상호작용 설정 (안전한 방식)
+    try {
+      this.cookingButton.setInteractive();
+      console.log("요리 버튼 setInteractive 성공");
+    } catch (error) {
+      console.error("요리 버튼 setInteractive 실패:", error);
+    }
+
+    // 클릭 이벤트
+    this.cookingButton.on("pointerdown", () => {
+      console.log("요리하기 버튼 클릭됨!");
+      this.openCookingGame();
+    });
+
+    // 텍스트 생성 (상호작용 비활성화)
     this.cookingButtonText = this.add
-      .text(width - 150, height - 50, "요리하기", {
+      .text(buttonX, buttonY, "🍳 요리하기", {
         fontSize: UI_CONSTANTS.HUD_FONT_SIZE,
         color: COLORS.COOKING_BUTTON_TEXT,
         fontFamily: "Arial",
+        fontWeight: "bold",
       })
-      .setOrigin(0.5)
-      .setDepth(UI_CONSTANTS.Z_INDEX.HUD);
+      .setOrigin(0.5);
+
+    // 텍스트는 상호작용하지 않도록 설정
+    this.cookingButtonText.disableInteractive();
+
+    // 버튼을 가장 위에 표시
+    this.cookingButton.setDepth(50000);
+    this.cookingButtonText.setDepth(50001);
+
+    console.log("요리하기 버튼 생성 완료");
+  }
+
+  /**
+   * 입력 시스템 재설정
+   * @private
+   */
+  resetInputSystem() {
+    try {
+      console.log("입력 시스템 재설정 시작");
+
+      // 모든 인터랙티브 객체 확인 및 재설정
+      if (this.cookingButton && this.cookingButton.input) {
+        console.log("요리 버튼 입력 시스템 확인");
+        if (!this.cookingButton.input.hitAreaCallback) {
+          console.warn("요리 버튼 hitAreaCallback 누락, 재설정...");
+          this.cookingButton.setInteractive();
+        }
+      }
+
+      console.log("입력 시스템 재설정 완료");
+    } catch (error) {
+      console.error("입력 시스템 재설정 중 오류:", error);
+    }
   }
 
   // ===========================================
@@ -408,22 +667,37 @@ export default class RoguelikeScene extends BaseScene {
    * @private
    */
   setupCookingGameListeners() {
+    // 씬 이벤트 리스너 설정
+    this.events.on("wake", () => {
+      console.log("RoguelikeScene이 깨어났습니다.");
+    });
+  }
+
+  /**
+   * CookingScene 이벤트 리스너를 설정합니다.
+   * @private
+   */
+  setupCookingEventListeners() {
     try {
       const cookingScene = this.scene.get("CookingScene");
-      if (!cookingScene) {
-        console.warn("CookingScene이 존재하지 않습니다.");
-        return;
+      if (cookingScene) {
+        // 기존 이벤트 리스너 제거 (중복 방지)
+        cookingScene.events.removeAllListeners("dishCreated");
+        cookingScene.events.removeAllListeners("popupClosed");
+
+        // 요리 완료 이벤트 리스너
+        cookingScene.events.on("dishCreated", (dishItem) => {
+          console.log("요리 완료:", dishItem);
+          this.addDishToInventory(dishItem);
+        });
+
+        // 팝업 닫힘 이벤트 리스너
+        cookingScene.events.on("popupClosed", () => {
+          console.log("요리 게임이 닫혔습니다.");
+        });
       }
-
-      cookingScene.events.on("popupClosed", () => {
-        console.log("요리 게임이 닫혔습니다.");
-      });
-
-      cookingScene.events.on("dishCreated", (dishItem) => {
-        this.addDishToInventory(dishItem);
-      });
     } catch (error) {
-      console.error("요리 게임 이벤트 리스너 설정 중 오류:", error);
+      console.error("CookingScene 이벤트 리스너 설정 중 오류:", error);
     }
   }
 
@@ -432,8 +706,24 @@ export default class RoguelikeScene extends BaseScene {
    * @private
    */
   openCookingGame() {
+    console.log("요리 게임 실행 시도");
     try {
-      this.scene.launch("CookingScene");
+      const cookingScene = this.scene.get("CookingScene");
+      if (!cookingScene) {
+        console.error("CookingScene을 찾을 수 없습니다.");
+        this.addMessage("요리 게임을 찾을 수 없습니다.", true);
+        return;
+      }
+
+      console.log("CookingScene 실행 중...");
+
+      // CookingScene 이벤트 리스너 설정
+      this.setupCookingEventListeners();
+
+      // CookingScene을 팝업으로 실행
+      this.scene.launch("CookingScene", { isPopup: true });
+
+      console.log("CookingScene 실행 완료");
     } catch (error) {
       console.error("요리 게임 실행 중 오류:", error);
       this.addMessage("요리 게임을 실행할 수 없습니다.", true);
@@ -540,18 +830,7 @@ export default class RoguelikeScene extends BaseScene {
    * 카메라 업데이트 - 캐릭터를 화면 중앙에 유지
    */
   updateCamera() {
-    const gameState = this.gameLogic.getGameState();
-    const { TILE_SIZE } = ROGUELIKE_CONFIG;
-
-    // 캐릭터를 화면 중앙에 고정하기 위해 맵 컨테이너 위치 조정
-    const offsetX = -gameState.player.x * TILE_SIZE;
-    const offsetY = -gameState.player.y * TILE_SIZE;
-
-    // 맵 컨테이너를 화면 중앙에 위치시키고 오프셋 적용
-    this.mapContainer.setPosition(
-      this.scale.width / 2 + offsetX,
-      this.scale.height / 2 + offsetY
-    );
+    this.updateMapPosition();
   }
 
   // ===========================================
@@ -587,7 +866,20 @@ export default class RoguelikeScene extends BaseScene {
    * 맵 컨테이너 초기화
    */
   clearMapContainer() {
-    this.mapContainer.removeAll(true);
+    // 컨테이너 내의 모든 객체를 안전하게 제거
+    if (this.mapContainer && this.mapContainer.list) {
+      const children = [...this.mapContainer.list]; // 복사본 생성
+      children.forEach((child) => {
+        if (child && typeof child.destroy === "function") {
+          // 상호작용이 활성화된 객체만 비활성화
+          if (child.input && typeof child.disableInteractive === "function") {
+            child.disableInteractive();
+          }
+          child.destroy();
+        }
+      });
+      this.mapContainer.removeAll(true);
+    }
   }
 
   /**
@@ -630,6 +922,7 @@ export default class RoguelikeScene extends BaseScene {
     const seen = gameState.seen[y][x];
     const visible = gameState.visible[y][x];
     const mapValue = gameState.map[y][x];
+    const brightness = gameState.brightness ? gameState.brightness[y][x] : 1.0;
 
     const screenX = x * tileSize;
     const screenY = y * tileSize;
@@ -639,14 +932,22 @@ export default class RoguelikeScene extends BaseScene {
       const groundSprite = this.add
         .image(screenX, screenY, "ground")
         .setOrigin(0.5)
-        .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+        .setScale(
+          (tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
+            UI_CONSTANTS.TILE_SCALE_FACTOR
+        )
+        .setAlpha(brightness); // 명도에 따른 투명도 조절
       this.mapContainer.add(groundSprite);
     } else if (mapValue === TILE_TYPES.WALL && seen) {
       // 벽 타일인 경우 이미지 사용
       const wallSprite = this.add
         .image(screenX, screenY, "wall-top")
         .setOrigin(0.5)
-        .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+        .setScale(
+          (tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
+            UI_CONSTANTS.TILE_SCALE_FACTOR
+        )
+        .setAlpha(brightness); // 명도에 따른 투명도 조절
       this.mapContainer.add(wallSprite);
     } else {
       // 다른 타일들은 기존 방식으로 렌더링
@@ -657,13 +958,14 @@ export default class RoguelikeScene extends BaseScene {
         tileSize,
         tileSize,
         color
-      );
+      )
+      .setAlpha(brightness); // 명도에 따른 투명도 조절
       this.mapContainer.add(tile);
     }
 
     // 계단 표시
     if (mapValue === TILE_TYPES.STAIRS && (visible || seen)) {
-      this.renderStairs(screenX, screenY, tileSize);
+      this.renderStairs(screenX, screenY, tileSize, brightness);
     }
   }
 
@@ -690,14 +992,15 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 계단 렌더링
    */
-  renderStairs(screenX, screenY, tileSize) {
+  renderStairs(screenX, screenY, tileSize, brightness = 1.0) {
     const stairs = this.add
       .text(screenX, screenY, ">", {
         fontSize: UI_CONSTANTS.TILE_FONT_SIZE,
         color: COLORS.STAIRS,
         fontFamily: "Arial",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setAlpha(brightness); // 명도에 따른 투명도 조절
     this.mapContainer.add(stairs);
   }
 
@@ -712,7 +1015,8 @@ export default class RoguelikeScene extends BaseScene {
         this.isItemInBounds(item, bounds) &&
         gameState.visible[item.y][item.x]
       ) {
-        this.renderSingleItem(item, TILE_SIZE);
+        const brightness = gameState.brightness ? gameState.brightness[item.y][item.x] : 1.0;
+        this.renderSingleItem(item, TILE_SIZE, brightness);
       }
     });
   }
@@ -732,7 +1036,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 단일 아이템 렌더링
    */
-  renderSingleItem(item, tileSize) {
+  renderSingleItem(item, tileSize, brightness = 1.0) {
     const itemType = ITEM_DEFINITIONS[item.type];
     const screenX = item.x * tileSize;
     const screenY = item.y * tileSize;
@@ -743,7 +1047,8 @@ export default class RoguelikeScene extends BaseScene {
         color: `#${itemType.color.toString(16)}`,
         fontFamily: "Arial",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setAlpha(brightness); // 명도에 따른 투명도 조절
     this.mapContainer.add(itemSprite);
   }
 
@@ -759,7 +1064,8 @@ export default class RoguelikeScene extends BaseScene {
         this.isItemInBounds(trap, bounds) &&
         gameState.visible[trap.y][trap.x]
       ) {
-        this.renderSingleTrap(trap, TILE_SIZE);
+        const brightness = gameState.brightness ? gameState.brightness[trap.y][trap.x] : 1.0;
+        this.renderSingleTrap(trap, TILE_SIZE, brightness);
       }
     });
   }
@@ -767,7 +1073,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 단일 함정 렌더링
    */
-  renderSingleTrap(trap, tileSize) {
+  renderSingleTrap(trap, tileSize, brightness = 1.0) {
     const screenX = trap.x * tileSize;
     const screenY = trap.y * tileSize;
 
@@ -777,7 +1083,8 @@ export default class RoguelikeScene extends BaseScene {
         color: COLORS.ENEMY,
         fontFamily: "Arial",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setAlpha(brightness); // 명도에 따른 투명도 조절
     this.mapContainer.add(trapSprite);
   }
 
@@ -792,7 +1099,8 @@ export default class RoguelikeScene extends BaseScene {
         this.isItemInBounds(enemy, bounds) &&
         gameState.visible[enemy.y][enemy.x]
       ) {
-        this.renderSingleEnemy(enemy, TILE_SIZE);
+        const brightness = gameState.brightness ? gameState.brightness[enemy.y][enemy.x] : 1.0;
+        this.renderSingleEnemy(enemy, TILE_SIZE, brightness);
       }
     });
   }
@@ -800,7 +1108,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 단일 적 렌더링
    */
-  renderSingleEnemy(enemy, tileSize) {
+  renderSingleEnemy(enemy, tileSize, brightness = 1.0) {
     const screenX = enemy.x * tileSize;
     const screenY = enemy.y * tileSize;
 
@@ -819,6 +1127,7 @@ export default class RoguelikeScene extends BaseScene {
       enemySprite = this.createEnemyTextSprite(enemy, screenX, screenY);
     }
 
+    enemySprite.setAlpha(brightness); // 명도에 따른 투명도 조절
     this.mapContainer.add(enemySprite);
   }
 
@@ -831,7 +1140,10 @@ export default class RoguelikeScene extends BaseScene {
     return this.add
       .image(screenX, screenY, rabbitImageKey)
       .setOrigin(0.5)
-      .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+      .setScale(
+        (tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
+          UI_CONSTANTS.MONSTER_SCALE_FACTOR
+      );
   }
 
   /**
@@ -845,7 +1157,10 @@ export default class RoguelikeScene extends BaseScene {
     return this.add
       .image(screenX, screenY, glowMushroomImageKey)
       .setOrigin(0.5)
-      .setScale(tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+      .setScale(
+        (tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
+          UI_CONSTANTS.MONSTER_SCALE_FACTOR
+      );
   }
 
   /**
@@ -870,14 +1185,17 @@ export default class RoguelikeScene extends BaseScene {
     const playerImageKey =
       gameState.player.facing === "left" ? "hero-left" : "hero-right";
 
+    // 타일과 동일한 좌표 계산 방식 사용
+    const screenX = gameState.player.x * TILE_SIZE;
+    const screenY = gameState.player.y * TILE_SIZE;
+
     const playerSprite = this.add
-      .image(
-        gameState.player.x * TILE_SIZE,
-        gameState.player.y * TILE_SIZE,
-        playerImageKey
-      )
+      .image(screenX, screenY, playerImageKey)
       .setOrigin(0.5)
-      .setScale(TILE_SIZE / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+      .setScale(
+        (TILE_SIZE / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
+          UI_CONSTANTS.CHARACTER_SCALE_FACTOR
+      );
     this.mapContainer.add(playerSprite);
   }
 
@@ -928,7 +1246,20 @@ export default class RoguelikeScene extends BaseScene {
    * 미니맵 초기화
    */
   clearMinimap() {
-    this.minimapContainer.removeAll(true);
+    // 컨테이너 내의 모든 객체를 안전하게 제거
+    if (this.minimapContainer && this.minimapContainer.list) {
+      const children = [...this.minimapContainer.list]; // 복사본 생성
+      children.forEach((child) => {
+        if (child && typeof child.destroy === "function") {
+          // 상호작용이 활성화된 객체만 비활성화
+          if (child.input && typeof child.disableInteractive === "function") {
+            child.disableInteractive();
+          }
+          child.destroy();
+        }
+      });
+      this.minimapContainer.removeAll(true);
+    }
   }
 
   /**
@@ -978,7 +1309,10 @@ export default class RoguelikeScene extends BaseScene {
       const groundSprite = this.add
         .image(0, 0, "ground")
         .setOrigin(0.5)
-        .setScale(config.tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+        .setScale(
+          (config.tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
+            UI_CONSTANTS.TILE_SCALE_FACTOR
+        );
       groundSprite.setPosition(minimapX, minimapY);
       this.minimapContainer.add(groundSprite);
     } else if (mapValue === TILE_TYPES.WALL && seen) {
@@ -986,7 +1320,10 @@ export default class RoguelikeScene extends BaseScene {
       const wallSprite = this.add
         .image(0, 0, "wall-top")
         .setOrigin(0.5)
-        .setScale(config.tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR);
+        .setScale(
+          (config.tileSize / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
+            UI_CONSTANTS.TILE_SCALE_FACTOR
+        );
       wallSprite.setPosition(minimapX, minimapY);
       this.minimapContainer.add(wallSprite);
     } else {
@@ -1160,6 +1497,7 @@ export default class RoguelikeScene extends BaseScene {
    */
   handleGlobalKeys() {
     if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
+      console.log("R 키 눌림 - 게임 재시작");
       this.restartGame();
       return true;
     }
@@ -1194,18 +1532,37 @@ export default class RoguelikeScene extends BaseScene {
    * 이동 입력 처리
    */
   handleMovementInput() {
+    const currentTime = this.time.now;
+
+    // 이동 지연 시간 체크
+    if (currentTime - this.lastMoveTime < this.moveDelay) {
+      return false;
+    }
+
     let moved = false;
 
+    // 각 방향을 독립적으로 처리 (동시 입력 허용)
     if (this.isLeftKeyPressed()) {
       this.gameLogic.gameState.player.facing = "left";
-      moved = this.gameLogic.tryMove(-1, 0);
-    } else if (this.isRightKeyPressed()) {
+      moved = this.gameLogic.tryMove(-1, 0) || moved;
+    }
+
+    if (this.isRightKeyPressed()) {
       this.gameLogic.gameState.player.facing = "right";
-      moved = this.gameLogic.tryMove(1, 0);
-    } else if (this.isUpKeyPressed()) {
-      moved = this.gameLogic.tryMove(0, -1);
-    } else if (this.isDownKeyPressed()) {
-      moved = this.gameLogic.tryMove(0, 1);
+      moved = this.gameLogic.tryMove(1, 0) || moved;
+    }
+
+    if (this.isUpKeyPressed()) {
+      moved = this.gameLogic.tryMove(0, -1) || moved;
+    }
+
+    if (this.isDownKeyPressed()) {
+      moved = this.gameLogic.tryMove(0, 1) || moved;
+    }
+
+    // 이동이 성공했을 때만 시간 업데이트
+    if (moved) {
+      this.lastMoveTime = currentTime;
     }
 
     return moved;
@@ -1247,43 +1604,31 @@ export default class RoguelikeScene extends BaseScene {
   }
 
   /**
-   * 왼쪽 키 입력 확인
+   * 왼쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isLeftKeyPressed() {
-    return (
-      Phaser.Input.Keyboard.JustDown(this.cursors.left) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.A)
-    );
+    return this.cursors.left.isDown || this.wasd.A.isDown;
   }
 
   /**
-   * 오른쪽 키 입력 확인
+   * 오른쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isRightKeyPressed() {
-    return (
-      Phaser.Input.Keyboard.JustDown(this.cursors.right) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.D)
-    );
+    return this.cursors.right.isDown || this.wasd.D.isDown;
   }
 
   /**
-   * 위쪽 키 입력 확인
+   * 위쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isUpKeyPressed() {
-    return (
-      Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.W)
-    );
+    return this.cursors.up.isDown || this.wasd.W.isDown;
   }
 
   /**
-   * 아래쪽 키 입력 확인
+   * 아래쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isDownKeyPressed() {
-    return (
-      Phaser.Input.Keyboard.JustDown(this.cursors.down) ||
-      Phaser.Input.Keyboard.JustDown(this.wasd.S)
-    );
+    return this.cursors.down.isDown || this.wasd.S.isDown;
   }
 
   // ===========================================
@@ -1376,10 +1721,96 @@ export default class RoguelikeScene extends BaseScene {
   }
 
   restartGame() {
+    console.log("게임 재시작 시작");
+
+    // 게임오버 UI 정리
+    this.clearGameOverUI();
+
+    // 모든 게임오버 관련 UI 요소 강제 정리
+    this.forceCleanupGameOverUI();
+
+    // 게임 재시작
     this.gameLogic.resetGame();
     this.gameLogic.generateLevel();
+
+    // 화면 업데이트
     this.render();
     this.updateHUD();
+    this.updateMessageLog();
+
+    console.log("게임 재시작 완료");
+  }
+
+  /**
+   * 게임오버 UI 강제 정리
+   * @private
+   */
+  forceCleanupGameOverUI() {
+    console.log("게임오버 UI 강제 정리 시작");
+
+    // 모든 UI 요소를 확인하고 게임오버 관련 요소들 정리
+    this.uiElements.forEach((element, key) => {
+      if (key === "victory" || key === "gameOver") {
+        console.log(`${key} UI 강제 정리 중...`);
+        if (element.overlay && element.overlay.destroy) {
+          element.overlay.destroy();
+        }
+        if (element.victoryText && element.victoryText.destroy) {
+          element.victoryText.destroy();
+        }
+        if (element.gameOverText && element.gameOverText.destroy) {
+          element.gameOverText.destroy();
+        }
+        if (element.instructionText && element.instructionText.destroy) {
+          element.instructionText.destroy();
+        }
+        this.uiElements.delete(key);
+      }
+    });
+
+    console.log("게임오버 UI 강제 정리 완료");
+  }
+
+  /**
+   * 게임오버 UI 정리
+   * @private
+   */
+  clearGameOverUI() {
+    console.log("게임오버 UI 정리 시작");
+
+    // 승리 화면 정리
+    const victoryUI = this.getUIElement("victory");
+    if (victoryUI) {
+      console.log("승리 UI 정리 중...");
+      if (victoryUI.overlay && victoryUI.overlay.destroy) {
+        victoryUI.overlay.destroy();
+      }
+      if (victoryUI.victoryText && victoryUI.victoryText.destroy) {
+        victoryUI.victoryText.destroy();
+      }
+      if (victoryUI.instructionText && victoryUI.instructionText.destroy) {
+        victoryUI.instructionText.destroy();
+      }
+      this.uiElements.delete("victory");
+    }
+
+    // 게임오버 화면 정리
+    const gameOverUI = this.getUIElement("gameOver");
+    if (gameOverUI) {
+      console.log("게임오버 UI 정리 중...");
+      if (gameOverUI.overlay && gameOverUI.overlay.destroy) {
+        gameOverUI.overlay.destroy();
+      }
+      if (gameOverUI.gameOverText && gameOverUI.gameOverText.destroy) {
+        gameOverUI.gameOverText.destroy();
+      }
+      if (gameOverUI.instructionText && gameOverUI.instructionText.destroy) {
+        gameOverUI.instructionText.destroy();
+      }
+      this.uiElements.delete("gameOver");
+    }
+
+    console.log("게임오버 UI 정리 완료");
   }
 
   /**

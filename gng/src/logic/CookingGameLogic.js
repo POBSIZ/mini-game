@@ -5,12 +5,25 @@
 import { BaseGameLogic } from "./BaseGameLogic.js";
 import { GAME_CONFIG, GAME_EVENTS } from "../data/Config.js";
 import { SYNERGY, findRecipe } from "../data/CookingData.js";
-import { isValidIngredient, isValidPalate } from "../data/Validation.js";
+import {
+  isValidIngredient,
+  isValidPalate,
+  isValidCookingGameState,
+} from "../data/Validation.js";
 
 export class CookingGameLogic extends BaseGameLogic {
   constructor() {
     super();
     this.init();
+  }
+
+  /**
+   * 게임 상태 검증 (요리 게임용)
+   * @param {Object} gameState - 검증할 게임 상태
+   * @returns {boolean} 유효성 여부
+   */
+  validateGameState(gameState) {
+    return isValidCookingGameState(gameState);
   }
 
   /**
@@ -43,6 +56,7 @@ export class CookingGameLogic extends BaseGameLogic {
     this.gameState.gameEnded = false;
     this.gameState.timeLeft = GAME_CONFIG.TIME_LIMIT;
     this.addMessage("요리 게임을 시작합니다!");
+    this.emit(GAME_EVENTS.COOKING_START, { gameType: "cooking" });
   }
 
   /**
@@ -52,6 +66,10 @@ export class CookingGameLogic extends BaseGameLogic {
     this.gameState.gameEnded = true;
     this.gameState.gameStarted = false;
     this.addMessage(`게임 종료! 최종 점수: ${this.gameState.score}`);
+    this.emit(GAME_EVENTS.GAME_OVER, {
+      reason: "timeout",
+      score: this.gameState.score,
+    });
   }
 
   /**
@@ -314,7 +332,11 @@ export class CookingGameLogic extends BaseGameLogic {
    * @returns {Object} 현재 게임 상태
    */
   getGameState() {
-    return this.gameState;
+    if (!this.isInitialized) {
+      console.error("게임이 초기화되지 않았습니다.");
+      return null;
+    }
+    return { ...this.gameState };
   }
 
   /**
@@ -322,6 +344,10 @@ export class CookingGameLogic extends BaseGameLogic {
    * @returns {Array} 현재 접시의 재료들
    */
   getCurrentPlate() {
+    if (!this.isInitialized) {
+      console.error("게임이 초기화되지 않았습니다.");
+      return [];
+    }
     return [...this.gameState.currentPlate];
   }
 
