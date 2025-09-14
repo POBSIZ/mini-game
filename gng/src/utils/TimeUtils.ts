@@ -197,12 +197,12 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * 스로틀 함수 (호출 빈도 제한)
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T, 
   limit: number
 ): (...args: Parameters<T>) => void {
   let inThrottle: boolean = false;
-  return function executedFunction(...args: Parameters<T>) {
+  return function executedFunction(this: any, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
@@ -218,7 +218,7 @@ export function throttleFrame<T extends (...args: any[]) => any>(
   func: T
 ): (...args: Parameters<T>) => void {
   let rafId: number | null = null;
-  return function executedFunction(...args: Parameters<T>) {
+  return function executedFunction(this: any, ...args: Parameters<T>) {
     if (rafId === null) {
       rafId = requestAnimationFrame(() => {
         func.apply(this, args);

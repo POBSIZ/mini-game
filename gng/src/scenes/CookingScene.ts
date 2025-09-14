@@ -64,6 +64,21 @@ const COOKING_UI_CONSTANTS = {
 };
 
 export default class CookingScene extends BaseScene {
+  // Game state properties
+  private pantryState: any;
+  private palate: any;
+
+  // UI elements
+  private overlay: Phaser.GameObjects.Rectangle | null;
+  private popupContainer: Phaser.GameObjects.Container | null;
+  private popupBg: Phaser.GameObjects.Rectangle | null;
+  private closeButton: Phaser.GameObjects.Rectangle | null;
+  private pickCountText: Phaser.GameObjects.Text | null;
+  private ingredientButtons: any[];
+  private plateArea: Phaser.GameObjects.Rectangle | null;
+  private plateItems: any[];
+  private cookButton: Phaser.GameObjects.Rectangle | null;
+
   constructor() {
     super({ key: "CookingScene" });
 
@@ -168,7 +183,7 @@ export default class CookingScene extends BaseScene {
    * @param {Object} gameSize - 새로운 게임 크기
    * @private
    */
-  handleResize(gameSize) {
+  handleResize(gameSize: any) {
     console.log("CookingScene 화면 크기 변경:", gameSize);
     const { width, height } = this.scale;
 
@@ -189,7 +204,7 @@ export default class CookingScene extends BaseScene {
    * @param {number} height - 화면 높이
    * @private
    */
-  createOverlay(width, height) {
+  createOverlay(width: number, height: number) {
     this.overlay = this.add.rectangle(
       width / 2,
       height / 2,
@@ -206,7 +221,7 @@ export default class CookingScene extends BaseScene {
    * @param {number} height - 화면 높이
    * @private
    */
-  createPopupContainer(width, height) {
+  createPopupContainer(width: number, height: number) {
     this.popupContainer = this.add.container(width / 2, height / 2);
     this.popupContainer.setDepth(999); // 높은 depth 설정
   }
@@ -405,7 +420,12 @@ export default class CookingScene extends BaseScene {
    * @returns {Phaser.GameObjects.Rectangle} 카드 객체
    * @private
    */
-  createIngredientCard(ingredient, position, width, height) {
+  createIngredientCard(
+    ingredient: any,
+    position: any,
+    width: number,
+    height: number
+  ) {
     const card = this.add.rectangle(
       position.x,
       position.y,
@@ -425,7 +445,7 @@ export default class CookingScene extends BaseScene {
    * @returns {Phaser.GameObjects.Image} 아이콘 객체
    * @private
    */
-  createIngredientIcon(ingredient, position) {
+  createIngredientIcon(ingredient: any, position: any) {
     const imageKey = this.getIngredientImageKey(ingredient.id);
     return this.add
       .image(position.x, position.y - 10, imageKey)
@@ -440,7 +460,7 @@ export default class CookingScene extends BaseScene {
    * @returns {Phaser.GameObjects.Text} 이름 텍스트 객체
    * @private
    */
-  createIngredientName(ingredient, position) {
+  createIngredientName(ingredient: any, position: any) {
     return this.add
       .text(position.x, position.y + 15, ingredient.name, {
         fontSize: COOKING_UI_CONSTANTS.FONTS.SMALL,
@@ -480,7 +500,7 @@ export default class CookingScene extends BaseScene {
    * @param {Object} ingredient - 재료 데이터
    * @private
    */
-  setupIngredientCardEvents(card, ingredient) {
+  setupIngredientCardEvents(card: any, ingredient: any) {
     card.on("pointerdown", () => this.pickIngredient(ingredient.id));
     card.on("pointerover", () =>
       card.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CARD_HOVER)
@@ -623,7 +643,7 @@ export default class CookingScene extends BaseScene {
     console.log("테스트 버튼 1 위치:", testButton1.x, testButton1.y);
     console.log("테스트 버튼 1 크기:", testButton1.width, testButton1.height);
 
-    testButton1.on("pointerdown", (pointer) => {
+    testButton1.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       console.log("테스트 버튼 1 클릭됨!", pointer.x, pointer.y);
       alert("테스트 버튼 1이 클릭되었습니다!");
     });
@@ -650,7 +670,7 @@ export default class CookingScene extends BaseScene {
     console.log("테스트 버튼 2 위치:", testButton2.x, testButton2.y);
     console.log("테스트 버튼 2 크기:", testButton2.width, testButton2.height);
 
-    testButton2.on("pointerdown", (pointer) => {
+    testButton2.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       console.log("테스트 버튼 2 클릭됨!", pointer.x, pointer.y);
       alert("테스트 버튼 2가 클릭되었습니다!");
     });
@@ -674,15 +694,15 @@ export default class CookingScene extends BaseScene {
     console.log("전역 입력 리스너 설정 시작");
 
     // 전역 마우스 이벤트
-    this.input.on("pointerdown", (pointer) => {
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       console.log("전역 마우스 클릭 감지:", pointer.x, pointer.y);
     });
 
-    this.input.on("pointerup", (pointer) => {
+    this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
       console.log("전역 마우스 릴리즈 감지:", pointer.x, pointer.y);
     });
 
-    this.input.on("pointermove", (pointer) => {
+    this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
       // 너무 많은 로그를 방지하기 위해 가끔만 출력
       if (Math.random() < 0.01) {
         console.log("전역 마우스 이동 감지:", pointer.x, pointer.y);
@@ -716,7 +736,9 @@ export default class CookingScene extends BaseScene {
   startGame() {
     console.log("startGame() 메서드 호출됨");
     try {
-      this.gameLogic.startGame();
+      if (this.gameLogic && 'startGame' in this.gameLogic) {
+      (this.gameLogic as any).startGame();
+    }
       console.log("게임 로직 시작 완료");
     } catch (error) {
       console.error("게임 시작 중 오류:", error);
@@ -728,7 +750,7 @@ export default class CookingScene extends BaseScene {
    * @param {string} ingredientId - 재료 ID
    * @private
    */
-  pickIngredient(ingredientId) {
+  pickIngredient(ingredientId: any) {
     try {
       const gameState = this.gameLogic.getGameState();
       if (gameState.gameEnded) return;
@@ -742,7 +764,7 @@ export default class CookingScene extends BaseScene {
       ingredient.stock--;
 
       // 게임 로직에 재료 추가
-      if (this.gameLogic.addIngredient(ingredient)) {
+      if (this.gameLogic && 'addIngredient' in this.gameLogic && (this.gameLogic as any).addIngredient(ingredient)) {
         this.updateUI();
       }
     } catch (error) {
@@ -757,7 +779,7 @@ export default class CookingScene extends BaseScene {
   updateUI() {
     try {
       const gameState = this.gameLogic.getGameState();
-      const currentPlate = this.gameLogic.getCurrentPlate();
+      const currentPlate = this.gameLogic && 'getCurrentPlate' in this.gameLogic ? (this.gameLogic as any).getCurrentPlate() : null;
 
       this.updateIngredientGrid();
       this.updatePlate();
@@ -772,7 +794,7 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   updateIngredientGrid() {
-    this.ingredientButtons.forEach((button) => {
+    this.ingredientButtons.forEach((button: any) => {
       const ingredient = this.pantryState.find(
         (ing) => ing.id === button.ingredient.id
       );
@@ -801,8 +823,8 @@ export default class CookingScene extends BaseScene {
   updatePlate() {
     this.clearPlateItems();
 
-    const currentPlate = this.gameLogic.getCurrentPlate();
-    const recipe = this.gameLogic.getCurrentRecipe();
+    const currentPlate = this.gameLogic && 'getCurrentPlate' in this.gameLogic ? (this.gameLogic as any).getCurrentPlate() : null;
+    const recipe = this.gameLogic && 'getCurrentRecipe' in this.gameLogic ? (this.gameLogic as any).getCurrentRecipe() : null;
 
     if (recipe) {
       this.showCompleteDish(recipe);
@@ -910,7 +932,7 @@ export default class CookingScene extends BaseScene {
         return;
       }
 
-      const currentPlate = this.gameLogic.getCurrentPlate();
+      const currentPlate = this.gameLogic && 'getCurrentPlate' in this.gameLogic ? (this.gameLogic as any).getCurrentPlate() : null;
       console.log("현재 접시 상태:", currentPlate);
 
       if (currentPlate.length === 0) {
@@ -1034,12 +1056,12 @@ export default class CookingScene extends BaseScene {
    * @param {Phaser.GameObjects.Text} cookingText - 조리 중 텍스트
    * @private
    */
-  finishCooking(cookingText) {
+  finishCooking(cookingText: any) {
     try {
       this.cleanupCookingUI(cookingText);
       this.enableCookButton();
 
-      const result = this.gameLogic.submitPlate(this.palate);
+      const result = this.gameLogic && 'submitPlate' in this.gameLogic ? (this.gameLogic as any).submitPlate(this.palate) : null;
       if (result.success) {
         this.handleCookingSuccess(result);
       } else {
@@ -1055,7 +1077,7 @@ export default class CookingScene extends BaseScene {
    * @param {Phaser.GameObjects.Text} cookingText - 조리 중 텍스트
    * @private
    */
-  cleanupCookingUI(cookingText) {
+  cleanupCookingUI(cookingText: any) {
     cookingText.destroy();
   }
 
@@ -1073,7 +1095,7 @@ export default class CookingScene extends BaseScene {
    * @param {Object} result - 조리 결과
    * @private
    */
-  handleCookingSuccess(result) {
+  handleCookingSuccess(result: any) {
     // 이벤트를 통해 RoguelikeScene에서 인벤토리 추가 처리
     this.events.emit("dishCreated", {
       type: "cooked_food",
@@ -1105,7 +1127,7 @@ export default class CookingScene extends BaseScene {
    * @param {Object} result - 조리 결과
    * @private
    */
-  handleCookingFailure(result) {
+  handleCookingFailure(result: any) {
     this.addMessage(result.message);
   }
 
@@ -1118,7 +1140,7 @@ export default class CookingScene extends BaseScene {
    * @param {string} dishName - 요리 이름
    * @private
    */
-  showResult(score, dishName) {
+  showResult(score: any, dishName: any) {
     this.createResultBackground();
     this.createResultImage();
     this.createResultTexts(score, dishName);
@@ -1147,7 +1169,7 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   createResultImage() {
-    const recipe = this.gameLogic.getCurrentRecipe();
+    const recipe = this.gameLogic && 'getCurrentRecipe' in this.gameLogic ? (this.gameLogic as any).getCurrentRecipe() : null;
     if (recipe) {
       const completeDishImage = this.add
         .image(0, -80, recipe.id)
@@ -1349,7 +1371,9 @@ export default class CookingScene extends BaseScene {
    */
   restartGame() {
     try {
-      this.gameLogic.resetGame();
+      if (this.gameLogic && 'resetGame' in this.gameLogic) {
+      (this.gameLogic as any).resetGame();
+    }
       this.initializeGameState();
       this.scene.restart();
     } catch (error) {

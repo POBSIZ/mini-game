@@ -92,7 +92,7 @@ export function randomFloat(min: number, max: number): number {
  */
 export function randomChoice<T>(choices: T[], weights?: number[]): T | null {
   if (!weights) {
-    return getRandomElement(choices);
+    return choices[Math.floor(Math.random() * choices.length)];
   }
 
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);

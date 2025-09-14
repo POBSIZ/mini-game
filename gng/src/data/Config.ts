@@ -19,7 +19,7 @@ export const ROGUELIKE_CONFIG = {
   START_HP: 24,
   HUNGER_MAX: 100,
   HUNGER_WARN: 40,
-  TILE_SIZE: 1000,
+  TILE_SIZE: 200,
   // 화면에 보이는 타일 수 (카메라용) - 더 넓은 시야를 위해 확장
   SCREEN_WIDTH: 50,
   SCREEN_HEIGHT: 30,

@@ -169,10 +169,10 @@ export class BaseScene extends Phaser.Scene {
 
     // 호버 효과
     button.on("pointerover", () => {
-      button.setTint(0x666666);
+      button.setFillStyle(0x666666);
     });
     button.on("pointerout", () => {
-      button.clearTint();
+      button.setFillStyle(defaultStyle.backgroundColor!);
     });
 
     return {
@@ -273,7 +273,7 @@ export class BaseScene extends Phaser.Scene {
   public destroy(): void {
     this.clearUIElements();
     this.clearGameEventListeners();
-    super.destroy();
+    // Scene cleanup handled by Phaser automatically
   }
 
   /**

@@ -92,9 +92,9 @@ export function removeDuplicates<T>(array: T[], keyFn?: (item: T) => any): T[] {
   if (!keyFn) {
     return [...new Set(array)];
   }
-  
+
   const seen = new Set();
-  return array.filter(item => {
+  return array.filter((item) => {
     const key = keyFn(item);
     if (seen.has(key)) {
       return false;
@@ -108,7 +108,7 @@ export function removeDuplicates<T>(array: T[], keyFn?: (item: T) => any): T[] {
  * 배열을 그룹으로 분류
  */
 export function groupBy<T, K extends string | number | symbol>(
-  array: T[], 
+  array: T[],
   keyFn: (item: T) => K
 ): Record<K, T[]> {
   return array.reduce((groups, item) => {
@@ -124,7 +124,10 @@ export function groupBy<T, K extends string | number | symbol>(
 /**
  * 배열 정렬 (원본 배열 변경하지 않음)
  */
-export function sortArray<T>(array: T[], compareFn?: (a: T, b: T) => number): T[] {
+export function sortArray<T>(
+  array: T[],
+  compareFn?: (a: T, b: T) => number
+): T[] {
   return [...array].sort(compareFn);
 }
 
@@ -133,11 +136,11 @@ export function sortArray<T>(array: T[], compareFn?: (a: T, b: T) => number): T[
  */
 export function findMax<T>(array: T[], keyFn?: (item: T) => number): T | null {
   if (array.length === 0) return null;
-  
+
   if (!keyFn) {
     return Math.max(...(array as unknown as number[])) as unknown as T;
   }
-  
+
   return array.reduce((max, item) => {
     const key = keyFn(item);
     const maxKey = keyFn(max);
@@ -150,11 +153,11 @@ export function findMax<T>(array: T[], keyFn?: (item: T) => number): T | null {
  */
 export function findMin<T>(array: T[], keyFn?: (item: T) => number): T | null {
   if (array.length === 0) return null;
-  
+
   if (!keyFn) {
     return Math.min(...(array as unknown as number[])) as unknown as T;
   }
-  
+
   return array.reduce((min, item) => {
     const key = keyFn(item);
     const minKey = keyFn(min);
@@ -165,9 +168,12 @@ export function findMin<T>(array: T[], keyFn?: (item: T) => number): T | null {
 /**
  * 배열의 평균값 계산
  */
-export function calculateAverage<T>(array: T[], keyFn?: (item: T) => number): number {
+export function calculateAverage<T>(
+  array: T[],
+  keyFn?: (item: T) => number
+): number {
   if (array.length === 0) return 0;
-  
+
   const values = keyFn ? array.map(keyFn) : (array as unknown as number[]);
   const sum = values.reduce((acc, val) => acc + val, 0);
   return sum / values.length;
@@ -176,7 +182,10 @@ export function calculateAverage<T>(array: T[], keyFn?: (item: T) => number): nu
 /**
  * 배열의 합계 계산
  */
-export function calculateSum<T>(array: T[], keyFn?: (item: T) => number): number {
+export function calculateSum<T>(
+  array: T[],
+  keyFn?: (item: T) => number
+): number {
   const values = keyFn ? array.map(keyFn) : (array as unknown as number[]);
   return values.reduce((acc, val) => acc + val, 0);
 }
@@ -184,7 +193,10 @@ export function calculateSum<T>(array: T[], keyFn?: (item: T) => number): number
 /**
  * 배열에서 조건에 맞는 첫 번째 요소 찾기
  */
-export function findFirst<T>(array: T[], predicate: (item: T) => boolean): T | undefined {
+export function findFirst<T>(
+  array: T[],
+  predicate: (item: T) => boolean
+): T | undefined {
   return array.find(predicate);
 }
 
@@ -198,14 +210,17 @@ export function findAll<T>(array: T[], predicate: (item: T) => boolean): T[] {
 /**
  * 배열에서 조건에 맞는 요소의 개수 세기
  */
-export function countBy<T>(array: T[], predicate: (item: T) => boolean): number {
+export function countBy<T>(
+  array: T[],
+  predicate: (item: T) => boolean
+): number {
   return array.filter(predicate).length;
 }
 
 /**
  * 배열을 평면화 (flatten)
  */
-export function flattenArray<T>(array: T[], depth: number = 1): T[] {
+export function flattenArray<T>(array: T[], depth: number = 1): unknown[] {
   return array.flat(depth);
 }
 
@@ -220,7 +235,7 @@ export function randomizeArray<T>(array: T[]): T[] {
  * 두 배열의 교집합 구하기
  */
 export function intersection<T>(arr1: T[], arr2: T[]): T[] {
-  return arr1.filter(item => arr2.includes(item));
+  return arr1.filter((item) => arr2.includes(item));
 }
 
 /**
@@ -234,5 +249,5 @@ export function union<T>(arr1: T[], arr2: T[]): T[] {
  * 두 배열의 차집합 구하기
  */
 export function difference<T>(arr1: T[], arr2: T[]): T[] {
-  return arr1.filter(item => !arr2.includes(item));
+  return arr1.filter((item) => !arr2.includes(item));
 }
