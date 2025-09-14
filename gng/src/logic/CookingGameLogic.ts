@@ -4,12 +4,40 @@
  */
 import { BaseGameLogic } from "./BaseGameLogic.js";
 import { GAME_CONFIG, GAME_EVENTS } from "../data/Config.js";
-import { SYNERGY, findRecipe } from "../data/CookingData.js";
+import {
+  SYNERGY,
+  findRecipe,
+  type Ingredient,
+  type Palate,
+  type Recipe,
+} from "../data/CookingData.js";
 import {
   isValidIngredient,
   isValidPalate,
   isValidCookingGameState,
+  type CookingGameState,
 } from "../data/Validation.js";
+
+// 요리 게임 상태 타입 정의
+interface CookingGameStateInternal extends CookingGameState {
+  messages: Array<{ text: string; isDanger: boolean; timestamp: number }>;
+}
+
+// 점수 계산 결과 타입
+interface ScoreResult {
+  score: number;
+  notes: string[];
+}
+
+// 접시 제출 결과 타입
+interface SubmitResult {
+  success: boolean;
+  message?: string;
+  score?: number;
+  totalScore?: number;
+  dishName?: string;
+  notes?: string[];
+}
 
 export class CookingGameLogic extends BaseGameLogic {
   constructor() {
@@ -19,18 +47,15 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 게임 상태 검증 (요리 게임용)
-   * @param {Object} gameState - 검증할 게임 상태
-   * @returns {boolean} 유효성 여부
    */
-  validateGameState(gameState) {
+  protected validateGameState(gameState: any): boolean {
     return isValidCookingGameState(gameState);
   }
 
   /**
    * 게임 상태 초기화
-   * @returns {Object} 초기 게임 상태
    */
-  initializeGameState() {
+  protected initializeGameState(): any {
     return {
       currentPlate: [],
       score: 0,
@@ -44,14 +69,14 @@ export class CookingGameLogic extends BaseGameLogic {
   /**
    * 게임 상태 초기화 (재시작용)
    */
-  resetGame() {
+  public resetGame(): void {
     this.reset();
   }
 
   /**
    * 게임 시작
    */
-  startGame() {
+  public startGame(): void {
     this.gameState.gameStarted = true;
     this.gameState.gameEnded = false;
     this.gameState.timeLeft = GAME_CONFIG.TIME_LIMIT;
@@ -62,7 +87,7 @@ export class CookingGameLogic extends BaseGameLogic {
   /**
    * 게임 종료
    */
-  endGame() {
+  public endGame(): void {
     this.gameState.gameEnded = true;
     this.gameState.gameStarted = false;
     this.addMessage(`게임 종료! 최종 점수: ${this.gameState.score}`);
@@ -74,10 +99,8 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 재료 추가
-   * @param {Object} ingredient - 추가할 재료
-   * @returns {boolean} 추가 성공 여부
    */
-  addIngredient(ingredient) {
+  public addIngredient(ingredient: Ingredient): boolean {
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return false;
     }
@@ -94,10 +117,8 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 재료 제거
-   * @param {number} index - 제거할 재료의 인덱스
-   * @returns {boolean} 제거 성공 여부
    */
-  removeIngredient(index) {
+  public removeIngredient(index: number): boolean {
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return false;
     }
@@ -113,9 +134,8 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 접시 비우기
-   * @returns {boolean} 비우기 성공 여부
    */
-  clearPlate() {
+  public clearPlate(): boolean {
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return false;
     }
@@ -127,18 +147,16 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 점수 계산
-   * @param {Object} palate - 미식가 취향
-   * @returns {Object} 점수와 노트
    */
-  calculateScore(palate) {
+  public calculateScore(palate: Palate): ScoreResult {
     const plate = this.gameState.currentPlate;
-    const names = plate.map((p) => p.name);
+    const names = plate.map((p: Ingredient) => p.name);
     let score = plate.length * GAME_CONFIG.BASE_POINTS;
-    let notes = [];
+    let notes: string[] = [];
 
     // 태그 기반 가중치 (취향)
-    plate.forEach((p) => {
-      p.tags.forEach((t) => {
+    plate.forEach((p: Ingredient) => {
+      p.tags.forEach((t: string) => {
         if (palate.likes.includes(t)) score += 3;
         if (palate.hates.includes(t)) score -= 2;
       });
@@ -176,13 +194,13 @@ export class CookingGameLogic extends BaseGameLogic {
     }
 
     // 다양성 보너스
-    const uniqueTags = new Set(plate.flatMap((p) => p.tags));
+    const uniqueTags = new Set(plate.flatMap((p: Ingredient) => p.tags));
     score += Math.max(0, uniqueTags.size - 3);
 
     // 너무 무거운 맛 패널티
-    const fat = plate.filter((p) => p.tags.includes("지방")).length;
+    const fat = plate.filter((p: Ingredient) => p.tags.includes("지방")).length;
     const prot = plate.filter(
-      (p) => p.tags.includes("단백질") || p.tags.includes("식물성")
+      (p: Ingredient) => p.tags.includes("단백질") || p.tags.includes("식물성")
     ).length;
     if (fat >= 2 && prot >= 2) score -= 4;
 
@@ -191,12 +209,10 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 음식 이름 생성 (레시피 시스템 기반)
-   * @param {Object} palate - 미식가 취향
-   * @returns {string} 생성된 음식 이름
    */
-  generateDishName(palate) {
+  public generateDishName(palate: Palate): string {
     const plate = this.gameState.currentPlate;
-    const ingredientIds = plate.map((ingredient) => ingredient.id);
+    const ingredientIds = plate.map((ingredient: Ingredient) => ingredient.id);
 
     // 완성된 레시피가 있는지 확인
     const recipe = findRecipe(ingredientIds);
@@ -205,7 +221,7 @@ export class CookingGameLogic extends BaseGameLogic {
     }
 
     // 완성된 레시피가 없으면 기본 조합 이름 생성
-    const has = (n) => plate.some((p) => p.name === n);
+    const has = (n: string) => plate.some((p: Ingredient) => p.name === n);
 
     if (has("토끼고기") && has("형광버섯")) {
       return "형광 토끼고기 버섯구이";
@@ -231,20 +247,17 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 현재 접시의 레시피 정보 반환
-   * @returns {Object|null} 레시피 정보 또는 null
    */
-  getCurrentRecipe() {
+  public getCurrentRecipe(): Recipe | undefined {
     const plate = this.gameState.currentPlate;
-    const ingredientIds = plate.map((ingredient) => ingredient.id);
+    const ingredientIds = plate.map((ingredient: Ingredient) => ingredient.id);
     return findRecipe(ingredientIds);
   }
 
   /**
    * 접시 제출
-   * @param {Object} palate - 미식가 취향
-   * @returns {Object} 제출 결과
    */
-  submitPlate(palate) {
+  public submitPlate(palate: Palate): SubmitResult {
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return { success: false, message: "게임이 진행 중이 아닙니다." };
     }
@@ -277,9 +290,8 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 시간 업데이트
-   * @param {number} deltaTime - 경과 시간 (초)
    */
-  updateTime(deltaTime) {
+  public updateTime(deltaTime: number): void {
     if (!this.gameState.gameStarted || this.gameState.gameEnded) {
       return;
     }
@@ -294,13 +306,10 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 조합 생성 함수
-   * @param {Array} arr - 배열
-   * @param {number} k - 조합 크기
-   * @returns {Array} 조합 배열
    */
-  combosOf(arr, k) {
-    const res = [];
-    (function dfs(start, path) {
+  private combosOf(arr: string[], k: number): string[][] {
+    const res: string[][] = [];
+    (function dfs(start: number, path: string[]) {
       if (path.length === k) {
         res.push([...path]);
         return;
@@ -316,10 +325,8 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 메시지 추가 (BaseGameLogic의 addMessage 사용)
-   * @param {string} text - 메시지 텍스트
-   * @param {boolean} isDanger - 위험 메시지 여부
    */
-  addMessage(text, isDanger = false) {
+  public addMessage(text: string, isDanger: boolean = false): void {
     super.addMessage(text, isDanger);
     // UI 표시를 위해 최근 10개 메시지만 유지
     if (this.gameState.messages.length > 10) {
@@ -329,21 +336,19 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 게임 상태 반환
-   * @returns {Object} 현재 게임 상태
    */
-  getGameState() {
+  public getGameState(): any {
     if (!this.isInitialized) {
       console.error("게임이 초기화되지 않았습니다.");
-      return null;
+      return this.initializeGameState();
     }
     return { ...this.gameState };
   }
 
   /**
    * 현재 접시 반환
-   * @returns {Array} 현재 접시의 재료들
    */
-  getCurrentPlate() {
+  public getCurrentPlate(): Ingredient[] {
     if (!this.isInitialized) {
       console.error("게임이 초기화되지 않았습니다.");
       return [];
@@ -353,33 +358,29 @@ export class CookingGameLogic extends BaseGameLogic {
 
   /**
    * 게임이 진행 중인지 확인
-   * @returns {boolean} 게임 진행 여부
    */
-  isGameActive() {
+  public isGameActive(): boolean {
     return this.gameState.gameStarted && !this.gameState.gameEnded;
   }
 
   /**
    * 게임이 종료되었는지 확인
-   * @returns {boolean} 게임 종료 여부
    */
-  isGameEnded() {
+  public isGameEnded(): boolean {
     return this.gameState.gameEnded;
   }
 
   /**
    * 남은 시간 반환
-   * @returns {number} 남은 시간 (초)
    */
-  getTimeLeft() {
+  public getTimeLeft(): number {
     return Math.max(0, this.gameState.timeLeft);
   }
 
   /**
    * 현재 점수 반환
-   * @returns {number} 현재 점수
    */
-  getScore() {
+  public getScore(): number {
     return this.gameState.score;
   }
 }

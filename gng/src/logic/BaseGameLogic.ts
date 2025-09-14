@@ -4,10 +4,27 @@
  */
 
 import { EventManager } from "./EventManager.js";
-import { GAME_EVENTS } from "../data/Config.js";
-import { isValidGameState } from "../data/Validation.js";
+import { GAME_EVENTS, type GameEvent } from "../data/Config.js";
+import { isValidGameState, type GameState } from "../data/Validation.js";
+
+// 메시지 타입 정의
+export interface Message {
+  text: string;
+  isDanger: boolean;
+  timestamp: number;
+}
+
+// 게임 오버 이벤트 데이터 타입
+export interface GameOverData {
+  reason?: string;
+  score?: number;
+}
 
 export class BaseGameLogic {
+  protected eventManager: EventManager;
+  protected gameState: any;
+  protected isInitialized: boolean;
+
   constructor() {
     this.eventManager = new EventManager();
     this.gameState = null;
@@ -16,25 +33,22 @@ export class BaseGameLogic {
 
   /**
    * 게임 상태 초기화 (하위 클래스에서 구현)
-   * @returns {Object} 초기 게임 상태
    */
-  initializeGameState() {
+  protected initializeGameState(): any {
     throw new Error("initializeGameState must be implemented by subclass");
   }
 
   /**
    * 게임 상태 검증 (하위 클래스에서 오버라이드 가능)
-   * @param {Object} gameState - 검증할 게임 상태
-   * @returns {boolean} 유효성 여부
    */
-  validateGameState(gameState) {
+  protected validateGameState(gameState: any): boolean {
     return isValidGameState(gameState);
   }
 
   /**
    * 게임 초기화
    */
-  init() {
+  public init(): void {
     if (this.isInitialized) {
       console.warn("게임이 이미 초기화되었습니다.");
       return;
@@ -53,7 +67,7 @@ export class BaseGameLogic {
   /**
    * 게임 재시작
    */
-  reset() {
+  public reset(): void {
     this.gameState = this.initializeGameState();
     this.isInitialized = true;
     // 게임 재시작 시에는 GAME_OVER 이벤트를 발생시키지 않음
@@ -61,9 +75,8 @@ export class BaseGameLogic {
 
   /**
    * 게임 상태 반환
-   * @returns {Object} 게임 상태
    */
-  getGameState() {
+  public getGameState(): any {
     if (!this.isInitialized) {
       throw new Error("게임이 초기화되지 않았습니다.");
     }
@@ -72,9 +85,8 @@ export class BaseGameLogic {
 
   /**
    * 게임 상태 설정
-   * @param {Object} newState - 새로운 게임 상태
    */
-  setGameState(newState) {
+  public setGameState(newState: any): void {
     if (!this.validateGameState(newState)) {
       throw new Error("유효하지 않은 게임 상태입니다.");
     }
@@ -83,9 +95,8 @@ export class BaseGameLogic {
 
   /**
    * 게임 상태 업데이트
-   * @param {Object} updates - 업데이트할 속성들
    */
-  updateGameState(updates) {
+  public updateGameState(updates: any): void {
     if (!this.isInitialized) {
       throw new Error("게임이 초기화되지 않았습니다.");
     }
@@ -101,39 +112,29 @@ export class BaseGameLogic {
 
   /**
    * 이벤트 리스너 등록
-   * @param {string} eventType - 이벤트 타입
-   * @param {Function} callback - 콜백 함수
-   * @param {Object} context - 콜백 실행 컨텍스트
    */
-  on(eventType, callback, context = null) {
+  public on(eventType: GameEvent, callback: (data?: any) => void, context: any = null): void {
     this.eventManager.on(eventType, callback, context);
   }
 
   /**
    * 이벤트 리스너 제거
-   * @param {string} eventType - 이벤트 타입
-   * @param {Function} callback - 제거할 콜백 함수
-   * @param {Object} context - 콜백 실행 컨텍스트
    */
-  off(eventType, callback, context = null) {
+  public off(eventType: GameEvent, callback: (data?: any) => void, context: any = null): void {
     this.eventManager.off(eventType, callback, context);
   }
 
   /**
    * 이벤트 발생
-   * @param {string} eventType - 이벤트 타입
-   * @param {*} data - 이벤트 데이터
    */
-  emit(eventType, data = null) {
+  public emit(eventType: GameEvent, data: any = null): void {
     this.eventManager.emit(eventType, data);
   }
 
   /**
    * 메시지 추가
-   * @param {string} text - 메시지 텍스트
-   * @param {boolean} isDanger - 위험 메시지 여부
    */
-  addMessage(text, isDanger = false) {
+  public addMessage(text: string, isDanger: boolean = false): void {
     if (!this.isInitialized) {
       throw new Error("게임이 초기화되지 않았습니다.");
     }
@@ -142,7 +143,7 @@ export class BaseGameLogic {
       this.gameState.messages = [];
     }
 
-    const message = {
+    const message: Message = {
       text,
       isDanger,
       timestamp: Date.now(),
@@ -160,27 +161,23 @@ export class BaseGameLogic {
 
   /**
    * 게임이 초기화되었는지 확인
-   * @returns {boolean} 초기화 여부
    */
-  isGameInitialized() {
+  public isGameInitialized(): boolean {
     return this.isInitialized;
   }
 
   /**
    * 게임이 종료되었는지 확인
-   * @returns {boolean} 게임 종료 여부
    */
-  isGameOver() {
+  public isGameOver(): boolean {
     if (!this.isInitialized) return false;
-    return this.gameState.gameOver || false;
+    return this.gameState?.gameOver || false;
   }
 
   /**
    * 게임 종료 설정
-   * @param {boolean} gameOver - 게임 종료 여부
-   * @param {string} reason - 종료 사유
    */
-  setGameOver(gameOver, reason = null) {
+  public setGameOver(gameOver: boolean, reason: string | null = null): void {
     if (!this.isInitialized) {
       throw new Error("게임이 초기화되지 않았습니다.");
     }
@@ -195,7 +192,7 @@ export class BaseGameLogic {
   /**
    * 게임 로직 정리
    */
-  destroy() {
+  public destroy(): void {
     this.eventManager.clear();
     this.gameState = null;
     this.isInitialized = false;

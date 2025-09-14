@@ -5,10 +5,8 @@
 
 /**
  * 시간을 MM:SS 형식으로 포맷
- * @param {number} seconds - 초 단위 시간
- * @returns {string} 포맷된 시간 문자열
  */
-export function formatTime(seconds) {
+export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, "0")}:${secs
@@ -18,10 +16,8 @@ export function formatTime(seconds) {
 
 /**
  * 시간을 HH:MM:SS 형식으로 포맷
- * @param {number} seconds - 초 단위 시간
- * @returns {string} 포맷된 시간 문자열
  */
-export function formatTimeLong(seconds) {
+export function formatTimeLong(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
@@ -33,10 +29,8 @@ export function formatTimeLong(seconds) {
 
 /**
  * 밀리초를 읽기 쉬운 형식으로 포맷
- * @param {number} milliseconds - 밀리초
- * @returns {string} 포맷된 시간 문자열
  */
-export function formatDuration(milliseconds) {
+export function formatDuration(milliseconds: number): string {
   const seconds = Math.floor(milliseconds / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
@@ -55,29 +49,22 @@ export function formatDuration(milliseconds) {
 
 /**
  * 현재 시간을 타임스탬프로 반환
- * @returns {number} 현재 타임스탬프
  */
-export function getCurrentTimestamp() {
+export function getCurrentTimestamp(): number {
   return Date.now();
 }
 
 /**
  * 두 시간 사이의 차이 계산
- * @param {number} startTime - 시작 시간 (타임스탬프)
- * @param {number} endTime - 끝 시간 (타임스탬프)
- * @returns {number} 차이 (밀리초)
  */
-export function getTimeDifference(startTime, endTime) {
+export function getTimeDifference(startTime: number, endTime: number): number {
   return endTime - startTime;
 }
 
 /**
  * 시간이 경과했는지 확인
- * @param {number} startTime - 시작 시간 (타임스탬프)
- * @param {number} duration - 경과 시간 (밀리초)
- * @returns {boolean} 시간이 경과했는지 여부
  */
-export function hasTimeElapsed(startTime, duration) {
+export function hasTimeElapsed(startTime: number, duration: number): boolean {
   return getCurrentTimestamp() - startTime >= duration;
 }
 
@@ -85,7 +72,14 @@ export function hasTimeElapsed(startTime, duration) {
  * 타이머 클래스
  */
 export class Timer {
-  constructor(duration, callback = null) {
+  private duration: number;
+  private callback: (() => void) | null;
+  private startTime: number | null;
+  private isRunning: boolean;
+  private isPaused: boolean;
+  private pausedTime: number;
+
+  constructor(duration: number, callback: (() => void) | null = null) {
     this.duration = duration;
     this.callback = callback;
     this.startTime = null;
@@ -97,7 +91,7 @@ export class Timer {
   /**
    * 타이머 시작
    */
-  start() {
+  public start(): void {
     if (this.isRunning) return;
 
     this.startTime = getCurrentTimestamp();
@@ -109,7 +103,7 @@ export class Timer {
   /**
    * 타이머 일시정지
    */
-  pause() {
+  public pause(): void {
     if (!this.isRunning || this.isPaused) return;
 
     this.pausedTime = getCurrentTimestamp();
@@ -119,17 +113,17 @@ export class Timer {
   /**
    * 타이머 재개
    */
-  resume() {
+  public resume(): void {
     if (!this.isRunning || !this.isPaused) return;
 
-    this.startTime += getCurrentTimestamp() - this.pausedTime;
+    this.startTime! += getCurrentTimestamp() - this.pausedTime;
     this.isPaused = false;
   }
 
   /**
    * 타이머 정지
    */
-  stop() {
+  public stop(): void {
     this.isRunning = false;
     this.isPaused = false;
     this.startTime = null;
@@ -138,42 +132,39 @@ export class Timer {
 
   /**
    * 남은 시간 계산
-   * @returns {number} 남은 시간 (밀리초)
    */
-  getRemainingTime() {
+  public getRemainingTime(): number {
     if (!this.isRunning) return this.duration;
 
     const elapsed = this.isPaused
-      ? this.pausedTime - this.startTime
-      : getCurrentTimestamp() - this.startTime;
+      ? this.pausedTime - this.startTime!
+      : getCurrentTimestamp() - this.startTime!;
 
     return Math.max(0, this.duration - elapsed);
   }
 
   /**
    * 경과 시간 계산
-   * @returns {number} 경과 시간 (밀리초)
    */
-  getElapsedTime() {
+  public getElapsedTime(): number {
     if (!this.isRunning) return 0;
 
     return this.isPaused
-      ? this.pausedTime - this.startTime
-      : getCurrentTimestamp() - this.startTime;
+      ? this.pausedTime - this.startTime!
+      : getCurrentTimestamp() - this.startTime!;
   }
 
   /**
    * 타이머가 완료되었는지 확인
-   * @returns {boolean} 완료 여부
    */
-  isComplete() {
+  public isComplete(): boolean {
     return this.getRemainingTime() <= 0;
   }
 
   /**
    * 타이머 업데이트 (콜백 호출)
    */
-  update() {
+  public update(): void {
     if (!this.isRunning || this.isPaused) return;
 
     if (this.isComplete()) {
@@ -187,31 +178,31 @@ export class Timer {
 
 /**
  * 디바운스 함수 (연속 호출 방지)
- * @param {Function} func - 실행할 함수
- * @param {number} wait - 대기 시간 (밀리초)
- * @returns {Function} 디바운스된 함수
  */
-export function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
+export function debounce<T extends (...args: any[]) => any>(
+  func: T, 
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+  return function executedFunction(...args: Parameters<T>) {
     const later = () => {
-      clearTimeout(timeout);
+      if (timeout) clearTimeout(timeout);
       func(...args);
     };
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
 }
 
 /**
  * 스로틀 함수 (호출 빈도 제한)
- * @param {Function} func - 실행할 함수
- * @param {number} limit - 제한 시간 (밀리초)
- * @returns {Function} 스로틀된 함수
  */
-export function throttle(func, limit) {
-  let inThrottle;
-  return function executedFunction(...args) {
+export function throttle<T extends (...args: any[]) => any>(
+  func: T, 
+  limit: number
+): (...args: Parameters<T>) => void {
+  let inThrottle: boolean = false;
+  return function executedFunction(...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;
@@ -222,12 +213,12 @@ export function throttle(func, limit) {
 
 /**
  * 애니메이션 프레임 기반 스로틀
- * @param {Function} func - 실행할 함수
- * @returns {Function} 프레임 스로틀된 함수
  */
-export function throttleFrame(func) {
-  let rafId = null;
-  return function executedFunction(...args) {
+export function throttleFrame<T extends (...args: any[]) => any>(
+  func: T
+): (...args: Parameters<T>) => void {
+  let rafId: number | null = null;
+  return function executedFunction(...args: Parameters<T>) {
     if (rafId === null) {
       rafId = requestAnimationFrame(() => {
         func.apply(this, args);
@@ -239,49 +230,35 @@ export function throttleFrame(func) {
 
 /**
  * 지연 실행 함수
- * @param {Function} func - 실행할 함수
- * @param {number} delay - 지연 시간 (밀리초)
- * @returns {number} 타이머 ID
  */
-export function delay(func, delay) {
+export function delay(func: () => void, delay: number): NodeJS.Timeout {
   return setTimeout(func, delay);
 }
 
 /**
  * 간격 실행 함수
- * @param {Function} func - 실행할 함수
- * @param {number} interval - 간격 (밀리초)
- * @returns {number} 타이머 ID
  */
-export function interval(func, interval) {
+export function interval(func: () => void, interval: number): NodeJS.Timeout {
   return setInterval(func, interval);
 }
 
 /**
  * 다음 프레임에서 실행
- * @param {Function} func - 실행할 함수
- * @returns {number} 애니메이션 프레임 ID
  */
-export function nextFrame(func) {
+export function nextFrame(func: () => void): number {
   return requestAnimationFrame(func);
 }
 
 /**
  * 시간 기반 보간 함수
- * @param {number} start - 시작값
- * @param {number} end - 끝값
- * @param {number} currentTime - 현재 시간
- * @param {number} duration - 총 시간
- * @param {Function} easing - 이징 함수 (선택사항)
- * @returns {number} 보간된 값
  */
 export function timeBasedLerp(
-  start,
-  end,
-  currentTime,
-  duration,
-  easing = null
-) {
+  start: number,
+  end: number,
+  currentTime: number,
+  duration: number,
+  easing?: (t: number) => number
+): number {
   const progress = Math.min(currentTime / duration, 1);
   const easedProgress = easing ? easing(progress) : progress;
   return start + (end - start) * easedProgress;
@@ -291,15 +268,15 @@ export function timeBasedLerp(
  * 이징 함수들
  */
 export const EasingFunctions = {
-  linear: (t) => t,
-  easeInQuad: (t) => t * t,
-  easeOutQuad: (t) => t * (2 - t),
-  easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
-  easeInCubic: (t) => t * t * t,
-  easeOutCubic: (t) => --t * t * t + 1,
-  easeInOutCubic: (t) =>
+  linear: (t: number) => t,
+  easeInQuad: (t: number) => t * t,
+  easeOutQuad: (t: number) => t * (2 - t),
+  easeInOutQuad: (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+  easeInCubic: (t: number) => t * t * t,
+  easeOutCubic: (t: number) => --t * t * t + 1,
+  easeInOutCubic: (t: number) =>
     t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1,
-  easeInSine: (t) => 1 - Math.cos((t * Math.PI) / 2),
-  easeOutSine: (t) => Math.sin((t * Math.PI) / 2),
-  easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+  easeInSine: (t: number) => 1 - Math.cos((t * Math.PI) / 2),
+  easeOutSine: (t: number) => Math.sin((t * Math.PI) / 2),
+  easeInOutSine: (t: number) => -(Math.cos(Math.PI * t) - 1) / 2,
 };

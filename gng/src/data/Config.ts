@@ -8,8 +8,7 @@ export const GAME_CONFIG = {
   BASE_POINTS: 3,
   MAX_PICK: 5,
   TIME_LIMIT: 60,
-  THRESHOLD_BASE: 36,
-};
+} as const;
 
 // 로그라이크 게임 설정
 export const ROGUELIKE_CONFIG = {
@@ -24,7 +23,7 @@ export const ROGUELIKE_CONFIG = {
   // 화면에 보이는 타일 수 (카메라용) - 더 넓은 시야를 위해 확장
   SCREEN_WIDTH: 50,
   SCREEN_HEIGHT: 30,
-};
+} as const;
 
 // UI 설정
 export const UI_CONFIG = {
@@ -55,14 +54,14 @@ export const UI_CONFIG = {
     LARGE: 24,
     XLARGE: 32,
   },
-};
+} as const;
 
 // 게임 모드 타입
 export const GAME_MODES = {
   ROGUELIKE: "roguelike",
   COOKING: "cooking",
   POPUP: "popup",
-};
+} as const;
 
 // 아이템 타입 상수
 export const ITEM_TYPES = {
@@ -70,16 +69,17 @@ export const ITEM_TYPES = {
   WEAPON: "weapon",
   ARMOR: "armor",
   FOOD: "food",
+  COOKED_FOOD: "cooked_food",
   TRAP: "trap",
   STAIRS: "stairs",
-};
+} as const;
 
 // 맵 타일 타입
 export const TILE_TYPES = {
   WALL: 1,
   FLOOR: 0,
   STAIRS: 2,
-};
+} as const;
 
 // 플레이어 상태
 export const PLAYER_STATES = {
@@ -87,7 +87,7 @@ export const PLAYER_STATES = {
   MOVING: "moving",
   ATTACKING: "attacking",
   DEAD: "dead",
-};
+} as const;
 
 // 게임 이벤트 타입
 export const GAME_EVENTS = {
@@ -102,34 +102,16 @@ export const GAME_EVENTS = {
   COOKING_END: "cookingEnd",
   INVENTORY_TOGGLE: "inventoryToggle",
   MESSAGE_ADDED: "messageAdded",
-};
+} as const;
 
-// 게임 상태 타입
-export const GAME_STATES = {
-  MENU: "menu",
-  PLAYING: "playing",
-  PAUSED: "paused",
-  GAME_OVER: "gameOver",
-  VICTORY: "victory",
-};
+// 타입 정의
+export type GameMode = typeof GAME_MODES[keyof typeof GAME_MODES];
+export type ItemType = typeof ITEM_TYPES[keyof typeof ITEM_TYPES];
+export type TileType = typeof TILE_TYPES[keyof typeof TILE_TYPES];
+export type PlayerState = typeof PLAYER_STATES[keyof typeof PLAYER_STATES];
+export type GameEvent = typeof GAME_EVENTS[keyof typeof GAME_EVENTS];
 
-// 방향 상수
-export const DIRECTIONS = {
-  UP: { x: 0, y: -1 },
-  DOWN: { x: 0, y: 1 },
-  LEFT: { x: -1, y: 0 },
-  RIGHT: { x: 1, y: 0 },
-  UP_LEFT: { x: -1, y: -1 },
-  UP_RIGHT: { x: 1, y: -1 },
-  DOWN_LEFT: { x: -1, y: 1 },
-  DOWN_RIGHT: { x: 1, y: 1 },
-};
-
-// AI 타입
-export const AI_TYPES = {
-  PASSIVE: "passive",
-  AGGRESSIVE: "aggressive",
-  BOSS: "boss",
-  GUARD: "guard",
-  PATROL: "patrol",
-};
+export interface Direction {
+  x: number;
+  y: number;
+}

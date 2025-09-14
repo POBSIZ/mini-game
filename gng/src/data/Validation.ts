@@ -3,81 +3,155 @@
  * 게임 데이터의 유효성을 검증하는 함수들을 제공합니다.
  */
 
-import { ITEM_TYPES, TILE_TYPES, PLAYER_STATES, GAME_MODES } from "./Config.js";
+import { ITEM_TYPES, TILE_TYPES, PLAYER_STATES, GAME_MODES, type ItemType, type TileType, type PlayerState, type GameMode } from "./Config.js";
+
+// 아이템 타입 정의
+export interface Item {
+  id?: string;
+  name: string;
+  type: ItemType;
+  x?: number;
+  y?: number;
+  [key: string]: any; // 추가 속성들을 위한 인덱스 시그니처
+}
+
+// 적 타입 정의
+export interface Enemy {
+  id?: string;
+  type: string;
+  x: number;
+  y: number;
+  hp: number;
+  maxHp?: number;
+  atk?: [number, number];
+  exp?: number;
+  facing?: string;
+  [key: string]: any; // 추가 속성들을 위한 인덱스 시그니처
+}
+
+// 플레이어 타입 정의
+export interface Player {
+  x: number;
+  y: number;
+  hp: number;
+  max: number;
+  exp: number;
+  level: number;
+  hunger: number;
+  atk?: [number, number];
+  nextExp?: number;
+  facing?: string;
+  [key: string]: any; // 추가 속성들을 위한 인덱스 시그니처
+}
+
+// 게임 상태 타입 정의
+export interface GameState {
+  level: number;
+  map: any[];
+  enemies: Enemy[];
+  items: Item[];
+  inventory: Item[];
+  messages: any[];
+  player: Player;
+  gameOver?: boolean;
+  inventoryOpen?: boolean;
+  equip?: any;
+  seen?: any[];
+  visible?: any[];
+  brightness?: any[];
+  traps?: any[];
+  [key: string]: any; // 추가 속성들을 위한 인덱스 시그니처
+}
+
+// 요리 게임 상태 타입 정의
+export interface CookingGameState {
+  currentPlate: any[];
+  score: number;
+  timeLeft: number;
+  gameStarted: boolean;
+  gameEnded: boolean;
+  messages: any[];
+  [key: string]: any; // 추가 속성들을 위한 인덱스 시그니처
+}
+
+// 재료 타입 정의
+export interface Ingredient {
+  id: string;
+  name: string;
+  icon: string;
+  stock: number;
+  tags: string[];
+}
+
+// 미식가 취향 타입 정의
+export interface Palate {
+  id: string;
+  name: string;
+  likes: string[];
+  hates: string[];
+}
+
+// 레시피 타입 정의
+export interface Recipe {
+  id: string;
+  name: string;
+  ingredients: string[];
+  score: number;
+}
 
 /**
  * 아이템 타입이 유효한지 검증
- * @param {string} itemType - 검증할 아이템 타입
- * @returns {boolean} 유효성 여부
  */
-export function isValidItemType(itemType) {
-  return Object.values(ITEM_TYPES).includes(itemType);
+export function isValidItemType(itemType: string): itemType is ItemType {
+  return Object.values(ITEM_TYPES).includes(itemType as ItemType);
 }
 
 /**
  * 타일 타입이 유효한지 검증
- * @param {number} tileType - 검증할 타일 타입
- * @returns {boolean} 유효성 여부
  */
-export function isValidTileType(tileType) {
-  return Object.values(TILE_TYPES).includes(tileType);
+export function isValidTileType(tileType: number): tileType is TileType {
+  return Object.values(TILE_TYPES).includes(tileType as TileType);
 }
 
 /**
  * 플레이어 상태가 유효한지 검증
- * @param {string} playerState - 검증할 플레이어 상태
- * @returns {boolean} 유효성 여부
  */
-export function isValidPlayerState(playerState) {
-  return Object.values(PLAYER_STATES).includes(playerState);
+export function isValidPlayerState(playerState: string): playerState is PlayerState {
+  return Object.values(PLAYER_STATES).includes(playerState as PlayerState);
 }
 
 /**
  * 게임 모드가 유효한지 검증
- * @param {string} gameMode - 검증할 게임 모드
- * @returns {boolean} 유효성 여부
  */
-export function isValidGameMode(gameMode) {
-  return Object.values(GAME_MODES).includes(gameMode);
+export function isValidGameMode(gameMode: string): gameMode is GameMode {
+  return Object.values(GAME_MODES).includes(gameMode as GameMode);
 }
 
 /**
  * 좌표가 유효한 범위 내에 있는지 검증
- * @param {number} x - X 좌표
- * @param {number} y - Y 좌표
- * @param {number} maxX - 최대 X 좌표
- * @param {number} maxY - 최대 Y 좌표
- * @returns {boolean} 유효성 여부
  */
-export function isValidCoordinate(x, y, maxX, maxY) {
+export function isValidCoordinate(x: number, y: number, maxX: number, maxY: number): boolean {
   return x >= 0 && x < maxX && y >= 0 && y < maxY;
 }
 
 /**
  * HP 값이 유효한지 검증
- * @param {number} hp - HP 값
- * @param {number} maxHp - 최대 HP
- * @returns {boolean} 유효성 여부
  */
-export function isValidHP(hp, maxHp) {
+export function isValidHP(hp: number, maxHp: number): boolean {
   return typeof hp === "number" && hp >= 0 && hp <= maxHp;
 }
 
 /**
  * 경험치 값이 유효한지 검증
- * @param {number} exp - 경험치 값
- * @returns {boolean} 유효성 여부
  */
-export function isValidExp(exp) {
+export function isValidExp(exp: number): boolean {
   return typeof exp === "number" && exp >= 0;
 }
 
 /**
  * 아이템 객체가 유효한지 검증
- * @param {Object} item - 검증할 아이템 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidItem(item) {
+export function isValidItem(item: any): item is Item {
   if (!item || typeof item !== "object") return false;
 
   return (
@@ -91,10 +165,8 @@ export function isValidItem(item) {
 
 /**
  * 적 객체가 유효한지 검증
- * @param {Object} enemy - 검증할 적 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidEnemy(enemy) {
+export function isValidEnemy(enemy: any): enemy is Enemy {
   if (!enemy || typeof enemy !== "object") return false;
 
   return (
@@ -108,10 +180,8 @@ export function isValidEnemy(enemy) {
 
 /**
  * 플레이어 객체가 유효한지 검증
- * @param {Object} player - 검증할 플레이어 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidPlayer(player) {
+export function isValidPlayer(player: any): player is Player {
   if (!player || typeof player !== "object") return false;
 
   return (
@@ -129,10 +199,8 @@ export function isValidPlayer(player) {
 
 /**
  * 게임 상태 객체가 유효한지 검증
- * @param {Object} gameState - 검증할 게임 상태 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidGameState(gameState) {
+export function isValidGameState(gameState: any): gameState is GameState {
   if (!gameState || typeof gameState !== "object") return false;
 
   return (
@@ -149,10 +217,8 @@ export function isValidGameState(gameState) {
 
 /**
  * 요리 재료가 유효한지 검증
- * @param {Object} ingredient - 검증할 재료 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidIngredient(ingredient) {
+export function isValidIngredient(ingredient: any): ingredient is Ingredient {
   if (!ingredient || typeof ingredient !== "object") return false;
 
   return (
@@ -167,10 +233,8 @@ export function isValidIngredient(ingredient) {
 
 /**
  * 미식가 취향이 유효한지 검증
- * @param {Object} palate - 검증할 미식가 취향 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidPalate(palate) {
+export function isValidPalate(palate: any): palate is Palate {
   if (!palate || typeof palate !== "object") return false;
 
   return (
@@ -183,10 +247,8 @@ export function isValidPalate(palate) {
 
 /**
  * 레시피가 유효한지 검증
- * @param {Object} recipe - 검증할 레시피 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidRecipe(recipe) {
+export function isValidRecipe(recipe: any): recipe is Recipe {
   if (!recipe || typeof recipe !== "object") return false;
 
   return (
@@ -201,21 +263,16 @@ export function isValidRecipe(recipe) {
 
 /**
  * 배열의 모든 요소가 유효한지 검증
- * @param {Array} array - 검증할 배열
- * @param {Function} validator - 각 요소를 검증할 함수
- * @returns {boolean} 유효성 여부
  */
-export function validateArray(array, validator) {
+export function validateArray<T>(array: any, validator: (item: any) => item is T): array is T[] {
   if (!Array.isArray(array)) return false;
   return array.every(validator);
 }
 
 /**
  * 요리 게임 상태 객체가 유효한지 검증
- * @param {Object} gameState - 검증할 게임 상태 객체
- * @returns {boolean} 유효성 여부
  */
-export function isValidCookingGameState(gameState) {
+export function isValidCookingGameState(gameState: any): gameState is CookingGameState {
   if (!gameState || typeof gameState !== "object") return false;
 
   return (
@@ -230,11 +287,8 @@ export function isValidCookingGameState(gameState) {
 
 /**
  * 객체의 필수 속성이 모두 존재하는지 검증
- * @param {Object} obj - 검증할 객체
- * @param {Array} requiredKeys - 필수 키 배열
- * @returns {boolean} 유효성 여부
  */
-export function hasRequiredKeys(obj, requiredKeys) {
+export function hasRequiredKeys(obj: any, requiredKeys: string[]): boolean {
   if (!obj || typeof obj !== "object") return false;
   return requiredKeys.every((key) => key in obj);
 }

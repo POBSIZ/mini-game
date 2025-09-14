@@ -3,10 +3,61 @@
  * 모든 게임 씬의 공통 기능을 제공합니다.
  */
 
-import { UI_CONFIG, GAME_EVENTS } from "../data/Config.js";
+import { UI_CONFIG, GAME_EVENTS, type GameEvent } from "../data/Config.js";
+import { BaseGameLogic } from "../logic/BaseGameLogic.js";
+
+// UI 요소 타입 정의
+interface UIElement {
+  destroy?: () => void;
+}
+
+// 버튼 스타일 타입 정의
+interface ButtonStyle {
+  width?: number;
+  height?: number;
+  backgroundColor?: number;
+  borderColor?: number;
+  borderWidth?: number;
+  textColor?: string;
+  fontSize?: string;
+}
+
+// 패널 스타일 타입 정의
+interface PanelStyle {
+  color?: number;
+  borderColor?: number;
+  borderWidth?: number;
+  alpha?: number;
+}
+
+// 텍스트 스타일 타입 정의
+interface TextStyle {
+  fontFamily?: string;
+  fontSize?: string;
+  color?: string;
+  resolution?: number;
+  [key: string]: any;
+}
+
+// 버튼 객체 타입 정의
+interface ButtonObject {
+  background: Phaser.GameObjects.Rectangle;
+  text: Phaser.GameObjects.Text;
+  destroy: () => void;
+}
+
+// 게임 크기 타입 정의
+interface GameSize {
+  width: number;
+  height: number;
+}
 
 export class BaseScene extends Phaser.Scene {
-  constructor(config) {
+  protected gameLogic: BaseGameLogic | null;
+  protected uiElements: Map<string, UIElement>;
+  protected eventListeners: Map<GameEvent, Array<(data?: any) => void>>;
+
+  constructor(config: string | Phaser.Types.Scenes.SettingsConfig) {
     super(config);
     this.gameLogic = null;
     this.uiElements = new Map();
@@ -16,40 +67,35 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 씬 초기화
    */
-  init() {
+  public init(): void {
     this.setupEventListeners();
   }
 
   /**
    * 이벤트 리스너 설정 (하위 클래스에서 구현)
    */
-  setupEventListeners() {
+  protected setupEventListeners(): void {
     // 하위 클래스에서 구현
   }
 
   /**
    * UI 요소 등록
-   * @param {string} key - UI 요소 키
-   * @param {Object} element - UI 요소 객체
    */
-  registerUIElement(key, element) {
+  protected registerUIElement(key: string, element: UIElement): void {
     this.uiElements.set(key, element);
   }
 
   /**
    * UI 요소 가져오기
-   * @param {string} key - UI 요소 키
-   * @returns {Object} UI 요소 객체
    */
-  getUIElement(key) {
+  protected getUIElement(key: string): UIElement | undefined {
     return this.uiElements.get(key);
   }
 
   /**
    * UI 요소 제거
-   * @param {string} key - UI 요소 키
    */
-  removeUIElement(key) {
+  protected removeUIElement(key: string): void {
     const element = this.uiElements.get(key);
     if (element && element.destroy) {
       element.destroy();
@@ -60,7 +106,7 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 모든 UI 요소 제거
    */
-  clearUIElements() {
+  protected clearUIElements(): void {
     this.uiElements.forEach((element) => {
       if (element && element.destroy) {
         element.destroy();
@@ -71,15 +117,10 @@ export class BaseScene extends Phaser.Scene {
 
   /**
    * 텍스트 생성 헬퍼
-   * @param {number} x - X 좌표
-   * @param {number} y - Y 좌표
-   * @param {string} text - 텍스트 내용
-   * @param {Object} style - 텍스트 스타일
-   * @returns {Phaser.GameObjects.Text} 생성된 텍스트 객체
    */
-  createText(x, y, text, style = {}) {
+  protected createText(x: number, y: number, text: string, style: TextStyle = {}): Phaser.GameObjects.Text {
     const devicePixelRatio = window.devicePixelRatio || 1;
-    const defaultStyle = {
+    const defaultStyle: TextStyle = {
       fontFamily: UI_CONFIG.FONTS.DEFAULT,
       fontSize: UI_CONFIG.FONTS.SIZES.MEDIUM,
       color: UI_CONFIG.COLORS.TEXT,
@@ -92,19 +133,19 @@ export class BaseScene extends Phaser.Scene {
 
   /**
    * 버튼 생성 헬퍼
-   * @param {number} x - X 좌표
-   * @param {number} y - Y 좌표
-   * @param {string} text - 버튼 텍스트
-   * @param {Function} callback - 클릭 콜백
-   * @param {Object} style - 버튼 스타일
-   * @returns {Object} 생성된 버튼 객체
    */
-  createButton(x, y, text, callback, style = {}) {
-    const defaultStyle = {
+  protected createButton(
+    x: number, 
+    y: number, 
+    text: string, 
+    callback: () => void, 
+    style: ButtonStyle = {}
+  ): ButtonObject {
+    const defaultStyle: ButtonStyle = {
       width: 120,
       height: 40,
-      backgroundColor: UI_CONFIG.COLORS.PRIMARY,
-      borderColor: UI_CONFIG.COLORS.BORDER,
+      backgroundColor: parseInt(UI_CONFIG.COLORS.PRIMARY.replace('#', ''), 16),
+      borderColor: parseInt(UI_CONFIG.COLORS.BORDER.replace('#', ''), 16),
       borderWidth: 2,
       textColor: UI_CONFIG.COLORS.TEXT,
       fontSize: UI_CONFIG.FONTS.SIZES.MEDIUM,
@@ -114,13 +155,13 @@ export class BaseScene extends Phaser.Scene {
     const button = this.add.rectangle(
       x,
       y,
-      defaultStyle.width,
-      defaultStyle.height,
-      defaultStyle.backgroundColor
+      defaultStyle.width!,
+      defaultStyle.height!,
+      defaultStyle.backgroundColor!
     );
     const buttonText = this.createText(x, y, text, {
-      fontSize: defaultStyle.fontSize,
-      color: defaultStyle.textColor,
+      fontSize: defaultStyle.fontSize!,
+      color: defaultStyle.textColor!,
     }).setOrigin(0.5);
 
     button.setInteractive();
@@ -146,35 +187,29 @@ export class BaseScene extends Phaser.Scene {
 
   /**
    * 패널 생성 헬퍼
-   * @param {number} x - X 좌표
-   * @param {number} y - Y 좌표
-   * @param {number} width - 패널 너비
-   * @param {number} height - 패널 높이
-   * @param {Object} style - 패널 스타일
-   * @returns {Phaser.GameObjects.Rectangle} 생성된 패널 객체
    */
-  createPanel(x, y, width, height, style = {}) {
-    const defaultStyle = {
-      color: UI_CONFIG.COLORS.PANEL,
-      borderColor: UI_CONFIG.COLORS.BORDER,
+  protected createPanel(x: number, y: number, width: number, height: number, style: PanelStyle = {}): Phaser.GameObjects.Rectangle {
+    const defaultStyle: PanelStyle = {
+      color: parseInt(UI_CONFIG.COLORS.PANEL.replace('#', ''), 16),
+      borderColor: parseInt(UI_CONFIG.COLORS.BORDER.replace('#', ''), 16),
       borderWidth: 2,
       alpha: 0.9,
       ...style,
     };
 
-    const panel = this.add.rectangle(x, y, width, height, defaultStyle.color);
-    panel.setAlpha(defaultStyle.alpha);
+    const panel = this.add.rectangle(x, y, width, height, defaultStyle.color!);
+    panel.setAlpha(defaultStyle.alpha!);
 
-    if (defaultStyle.borderWidth > 0) {
+    if (defaultStyle.borderWidth! > 0) {
       const border = this.add.rectangle(
         x,
         y,
         width,
         height,
-        defaultStyle.borderColor
+        defaultStyle.borderColor!
       );
-      border.setStrokeStyle(defaultStyle.borderWidth, defaultStyle.borderColor);
-      border.setAlpha(defaultStyle.alpha);
+      border.setStrokeStyle(defaultStyle.borderWidth!, defaultStyle.borderColor!);
+      border.setAlpha(defaultStyle.alpha!);
     }
 
     return panel;
@@ -182,10 +217,8 @@ export class BaseScene extends Phaser.Scene {
 
   /**
    * 게임 로직 이벤트 리스너 등록
-   * @param {string} eventType - 이벤트 타입
-   * @param {Function} callback - 콜백 함수
    */
-  onGameEvent(eventType, callback) {
+  protected onGameEvent(eventType: GameEvent, callback: (data?: any) => void): void {
     if (!this.gameLogic) return;
 
     this.gameLogic.on(eventType, callback, this);
@@ -193,21 +226,19 @@ export class BaseScene extends Phaser.Scene {
     if (!this.eventListeners.has(eventType)) {
       this.eventListeners.set(eventType, []);
     }
-    this.eventListeners.get(eventType).push(callback);
+    this.eventListeners.get(eventType)!.push(callback);
   }
 
   /**
    * 게임 로직 이벤트 리스너 제거
-   * @param {string} eventType - 이벤트 타입
-   * @param {Function} callback - 콜백 함수
    */
-  offGameEvent(eventType, callback) {
+  protected offGameEvent(eventType: GameEvent, callback: (data?: any) => void): void {
     if (!this.gameLogic) return;
 
     this.gameLogic.off(eventType, callback, this);
 
     if (this.eventListeners.has(eventType)) {
-      const listeners = this.eventListeners.get(eventType);
+      const listeners = this.eventListeners.get(eventType)!;
       const index = listeners.indexOf(callback);
       if (index !== -1) {
         listeners.splice(index, 1);
@@ -218,12 +249,12 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 모든 게임 이벤트 리스너 제거
    */
-  clearGameEventListeners() {
+  protected clearGameEventListeners(): void {
     if (!this.gameLogic) return;
 
     this.eventListeners.forEach((callbacks, eventType) => {
       callbacks.forEach((callback) => {
-        this.gameLogic.off(eventType, callback, this);
+        this.gameLogic!.off(eventType, callback, this);
       });
     });
     this.eventListeners.clear();
@@ -231,16 +262,15 @@ export class BaseScene extends Phaser.Scene {
 
   /**
    * 화면 크기 변경 처리 (하위 클래스에서 오버라이드)
-   * @param {Object} gameSize - 새로운 게임 크기
    */
-  handleResize(gameSize) {
+  protected handleResize(gameSize: GameSize): void {
     // 하위 클래스에서 구현
   }
 
   /**
    * 씬 정리
    */
-  destroy() {
+  public destroy(): void {
     this.clearUIElements();
     this.clearGameEventListeners();
     super.destroy();
@@ -248,10 +278,8 @@ export class BaseScene extends Phaser.Scene {
 
   /**
    * 에러 처리
-   * @param {Error} error - 에러 객체
-   * @param {string} context - 에러 발생 컨텍스트
    */
-  handleError(error, context = "Unknown") {
+  protected handleError(error: Error, context: string = "Unknown"): void {
     console.error(`[${this.scene.key}] ${context}:`, error);
 
     // 에러 메시지 표시
@@ -275,9 +303,8 @@ export class BaseScene extends Phaser.Scene {
 
   /**
    * 로딩 인디케이터 표시
-   * @param {string} message - 로딩 메시지
    */
-  showLoading(message = "로딩 중...") {
+  protected showLoading(message: string = "로딩 중..."): Phaser.GameObjects.Text {
     const loadingText = this.createText(
       this.cameras.main.centerX,
       this.cameras.main.centerY,
@@ -295,7 +322,7 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 로딩 인디케이터 숨기기
    */
-  hideLoading() {
+  protected hideLoading(): void {
     this.removeUIElement("loading");
   }
 }

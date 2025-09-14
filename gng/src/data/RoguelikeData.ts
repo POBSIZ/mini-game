@@ -3,10 +3,72 @@
  * 무기, 방어구, 적, 아이템 데이터를 관리합니다.
  */
 
-import { ITEM_TYPES } from "./Config.js";
+import { ITEM_TYPES, type ItemType } from "./Config.js";
+
+// 무기 타입 정의
+export interface Weapon {
+  name: string;
+  dmg: [number, number];
+  tier: number;
+  weight: number;
+}
+
+// 방어구 타입 정의
+export interface Armor {
+  name: string;
+  def: number;
+  tier: number;
+  weight: number;
+}
+
+// 적 타입 정의
+export interface EnemyType {
+  name: string;
+  symbol: string;
+  hp: [number, number];
+  atk: [number, number];
+  exp: number;
+  color: string;
+  speed: number;
+  ai: string;
+}
+
+// 아이템 정의 타입
+export interface ItemDefinition {
+  symbol: string;
+  name: string;
+  color: number;
+  description: string;
+  value: number;
+}
+
+// 함정 타입 정의
+export interface TrapType {
+  name: string;
+  symbol: string;
+  damage: [number, number];
+  color: string;
+  description: string;
+}
+
+// 아이템 생성 규칙 타입
+export interface ItemSpawnRule {
+  minCount: number;
+  maxCount: number;
+  spawnChance: number;
+  tierModifier: number;
+}
+
+// 적 스폰 규칙 타입
+export interface EnemySpawnRule {
+  baseChance: number;
+  levelModifier: number;
+  maxPerLevel: number;
+  spawnLevel?: number;
+}
 
 // 무기 데이터
-export const WEAPONS = [
+export const WEAPONS: Weapon[] = [
   { name: "녹슨 단검", dmg: [0, 1], tier: 1, weight: 2 },
   { name: "단검 +1", dmg: [1, 2], tier: 1, weight: 3 },
   { name: "장검 +2", dmg: [2, 3], tier: 2, weight: 3 },
@@ -14,7 +76,7 @@ export const WEAPONS = [
 ];
 
 // 방어구 데이터
-export const ARMORS = [
+export const ARMORS: Armor[] = [
   { name: "천옷", def: 1, tier: 1, weight: 3 },
   { name: "가죽 갑옷", def: 2, tier: 1, weight: 3 },
   { name: "사슬 갑옷", def: 3, tier: 2, weight: 2 },
@@ -22,7 +84,7 @@ export const ARMORS = [
 ];
 
 // 적 데이터
-export const ENEMY_TYPES = {
+export const ENEMY_TYPES: Record<string, EnemyType> = {
   goblin: {
     name: "형광 버섯",
     symbol: "g",
@@ -56,7 +118,7 @@ export const ENEMY_TYPES = {
 };
 
 // 아이템 타입 정의
-export const ITEM_DEFINITIONS = {
+export const ITEM_DEFINITIONS: Record<ItemType | 'cooked_food', ItemDefinition> = {
   [ITEM_TYPES.POTION]: {
     symbol: "!",
     name: "체력 물약",
@@ -109,7 +171,7 @@ export const ITEM_DEFINITIONS = {
 };
 
 // 함정 타입
-export const TRAP_TYPES = {
+export const TRAP_TYPES: Record<string, TrapType> = {
   SPIKE: {
     name: "가시 함정",
     symbol: "^",
@@ -134,7 +196,7 @@ export const TRAP_TYPES = {
 };
 
 // 아이템 생성 규칙
-export const ITEM_SPAWN_RULES = {
+export const ITEM_SPAWN_RULES: Record<ItemType, ItemSpawnRule> = {
   [ITEM_TYPES.POTION]: {
     minCount: 2,
     maxCount: 4,
@@ -159,10 +221,22 @@ export const ITEM_SPAWN_RULES = {
     spawnChance: 0.6,
     tierModifier: 0.2,
   },
+  [ITEM_TYPES.TRAP]: {
+    minCount: 1,
+    maxCount: 3,
+    spawnChance: 0.3,
+    tierModifier: 0.1,
+  },
+  [ITEM_TYPES.STAIRS]: {
+    minCount: 1,
+    maxCount: 1,
+    spawnChance: 1.0,
+    tierModifier: 0,
+  },
 };
 
 // 적 스폰 규칙
-export const ENEMY_SPAWN_RULES = {
+export const ENEMY_SPAWN_RULES: Record<string, EnemySpawnRule> = {
   goblin: {
     baseChance: 0.6,
     levelModifier: 0.1,
@@ -183,11 +257,11 @@ export const ENEMY_SPAWN_RULES = {
 
 // 레벨업 보상
 export const LEVEL_UP_REWARDS = {
-  HP_GAIN: [3, 5],
+  HP_GAIN: [3, 5] as [number, number],
   ATK_GAIN: 1,
   EXP_MULTIPLIER: 1.5,
   SKILL_POINTS: 1,
-};
+} as const;
 
 // 게임 밸런스 설정
 export const BALANCE_CONFIG = {
@@ -197,4 +271,4 @@ export const BALANCE_CONFIG = {
   EXP_CURVE: 15,
   LEVEL_SCALING: 0.3,
   DAMAGE_VARIANCE: 0.2,
-};
+} as const;

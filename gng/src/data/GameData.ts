@@ -16,6 +16,12 @@ export {
   TILE_TYPES,
   PLAYER_STATES,
   GAME_EVENTS,
+  type GameMode,
+  type ItemType,
+  type TileType,
+  type PlayerState,
+  type GameEvent,
+  type Direction,
 } from "./Config.js";
 
 // 요리 게임 데이터
@@ -28,6 +34,11 @@ export {
   RECIPES,
   findRecipe,
   isCompleteRecipe,
+  type Ingredient,
+  type Palate,
+  type Synergy,
+  type Recipe,
+  type DifficultyLevel,
 } from "./CookingData.js";
 
 // 로그라이크 게임 데이터
@@ -41,6 +52,13 @@ export {
   ENEMY_SPAWN_RULES,
   LEVEL_UP_REWARDS,
   BALANCE_CONFIG,
+  type Weapon,
+  type Armor,
+  type EnemyType,
+  type ItemDefinition,
+  type TrapType,
+  type ItemSpawnRule,
+  type EnemySpawnRule,
 } from "./RoguelikeData.js";
 
 // 데이터 검증 유틸리티
@@ -61,4 +79,10 @@ export {
   isValidRecipe,
   validateArray,
   hasRequiredKeys,
+  isValidCookingGameState,
+  type Item,
+  type Enemy,
+  type Player,
+  type GameState,
+  type CookingGameState,
 } from "./Validation.js";

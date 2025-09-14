@@ -3,8 +3,49 @@
  * 재료, 미식가 취향, 시너지 시스템 데이터를 관리합니다.
  */
 
+// 재료 타입 정의
+export interface Ingredient {
+  id: string;
+  name: string;
+  icon: string;
+  stock: number;
+  tags: string[];
+}
+
+// 미식가 취향 타입 정의
+export interface Palate {
+  id: string;
+  name: string;
+  likes: string[];
+  hates: string[];
+}
+
+// 시너지 타입 정의
+export interface Synergy {
+  pairs: Record<string, number>;
+  trios: Record<string, number>;
+}
+
+// 레시피 타입 정의
+export interface Recipe {
+  id: string;
+  name: string;
+  ingredients: string[];
+  image: string;
+  description: string;
+  score: number;
+}
+
+// 난이도 레벨 타입 정의
+export interface DifficultyLevel {
+  name: string;
+  timeLimit: number;
+  maxIngredients: number;
+  requiredScore: number;
+}
+
 // 재료 데이터 (3가지만 유지)
-export const INGREDIENTS = [
+export const INGREDIENTS: Ingredient[] = [
   {
     id: "rabbit",
     name: "토끼고기",
@@ -29,7 +70,7 @@ export const INGREDIENTS = [
 ];
 
 // 미식가 취향 (간소화)
-export const PALATES = [
+export const PALATES: Palate[] = [
   {
     id: "simple",
     name: "심플",
@@ -51,7 +92,7 @@ export const PALATES = [
 ];
 
 // 시너지 규칙 (간소화)
-export const SYNERGY = {
+export const SYNERGY: Synergy = {
   pairs: {
     "토끼고기+형광버섯": 8,
     "형광버섯+돌 후추": 6,
@@ -70,10 +111,10 @@ export const COOKING_CONFIG = {
   SYNERGY_MULTIPLIER: 1.5,
   DIVERSITY_BONUS: 2,
   PENALTY_THRESHOLD: 4,
-};
+} as const;
 
 // 레시피 데이터
-export const RECIPES = [
+export const RECIPES: Recipe[] = [
   {
     id: "complete-dish",
     name: "형광 토끼고기 후추볶음",
@@ -86,7 +127,7 @@ export const RECIPES = [
 ];
 
 // 레시피 검색 함수
-export function findRecipe(ingredientIds) {
+export function findRecipe(ingredientIds: string[]): Recipe | undefined {
   return RECIPES.find((recipe) => {
     if (recipe.ingredients.length !== ingredientIds.length) return false;
     return recipe.ingredients.every((id) => ingredientIds.includes(id));
@@ -94,12 +135,12 @@ export function findRecipe(ingredientIds) {
 }
 
 // 완성된 레시피인지 확인하는 함수
-export function isCompleteRecipe(ingredientIds) {
+export function isCompleteRecipe(ingredientIds: string[]): boolean {
   return findRecipe(ingredientIds) !== undefined;
 }
 
 // 요리 난이도 설정
-export const DIFFICULTY_LEVELS = {
+export const DIFFICULTY_LEVELS: Record<string, DifficultyLevel> = {
   EASY: {
     name: "쉬움",
     timeLimit: 90,

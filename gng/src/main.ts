@@ -4,7 +4,7 @@ import CookingScene from "./scenes/CookingScene.js";
 import "./style/style.css";
 
 // Game configuration
-const config = {
+const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: window.innerWidth,
   height: window.innerHeight,
@@ -13,8 +13,7 @@ const config = {
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    min: { width: 7680, height: 4320 },
-    max: { width: 7680, height: 4320 },
+    // min: { width: 1920 * 3, height: 1080 * 3 },
   },
   render: {
     pixelArt: true,
