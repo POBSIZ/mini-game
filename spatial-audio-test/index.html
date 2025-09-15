@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>공간 음향 테스트 — 입체 음향 퀴즈</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #141c2f;
+        --accent: #7c9cff;
+        --accent-2: #22d3ee;
+        --text: #e8ecf3;
+        --muted: #9aa6bf;
+        --good: #22c55e;
+        --bad: #ef4444;
+        --warn: #f59e0b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(
+          100% 100% at 50% 0%,
+          #101a34 0%,
+          var(--bg) 60%
+        );
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Pretendard, Apple SD Gothic Neo, Noto Sans KR, Helvetica, Arial,
+          "Apple Color Emoji", "Segoe UI Emoji";
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .app {
+        width: min(980px, 100%);
+      }
+      .card {
+        background: linear-gradient(180deg, #0f172a 0%, #0b1224 100%);
+        border: 1px solid #192343;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+      }
+      header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #1a2446;
+        background: linear-gradient(180deg, #101a34 0%, #0e162d 100%);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: 0.2px;
+      }
+      header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      main {
+        padding: 18px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+      .cols-2 {
+        grid-template-columns: 1fr 1fr;
+      }
+      @media (max-width: 800px) {
+        .cols-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid #1b2547;
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .panel h3 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .spacer {
+        flex: 1;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid #273155;
+        color: var(--text);
+        background: #122047;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.03s ease, border 0.2s, background 0.2s;
+      }
+      button:hover {
+        border-color: #33406e;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button.primary {
+        background: linear-gradient(180deg, #2a3e7d, #1f2f5f);
+        border-color: #3b4d86;
+      }
+      button.good {
+        background: linear-gradient(180deg, #1d4f2a, #153922);
+        border-color: #22683a;
+      }
+      button.bad {
+        background: linear-gradient(180deg, #6a1e1e, #4a1414);
+        border-color: #7a2a2a;
+      }
+      button.warn {
+        background: linear-gradient(180deg, #5a400f, #3b2b0b);
+        border-color: #6f520f;
+      }
+      button.small {
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+      }
+
+      .kbd {
+        font: 600 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          monospace;
+        background: #0b1224;
+        border: 1px solid #1a2446;
+        padding: 4px 6px;
+        border-radius: 8px;
+      }
+
+      .circle {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 16px;
+        border: 1px dashed #2a365f;
+        background: radial-gradient(120px 80px at 50% 50%, #182144, #101a34);
+      }
+      .circle .center {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .circle .dir {
+        position: absolute;
+        transform: translate(-50%, -50%);
+      }
+      .dir button {
+        min-width: 84px;
+      }
+
+      .score {
+        font-weight: 800;
+        letter-spacing: 0.5px;
+      }
+      .pill {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        background: #0b1224;
+        border: 1px solid #22305a;
+        padding: 8px 10px;
+        border-radius: 999px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        top: 18px;
+        transform: translateX(-50%);
+        background: #0b1224;
+        border: 1px solid #20305d;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+
+      .footer {
+        padding: 14px 18px;
+        border-top: 1px solid #1a2446;
+        color: #8ea1c7;
+        font-size: 12px;
+      }
+      a {
+        color: var(--accent-2);
+        text-decoration: none;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="card" role="application" aria-label="공간 음향 테스트 게임">
+        <header>
+          <h1>🎧 공간 음향 테스트 — 입체 음향 퀴즈</h1>
+          <p>
+            이어폰/헤드폰을 착용한 뒤 시작하세요. (스피커 사용 시 정답률이
+            낮아질 수 있어요)
+          </p>
+        </header>
+
+        <main class="grid cols-2">
+          <section class="panel" aria-labelledby="game-title">
+            <div class="row" style="margin-bottom: 10px">
+              <div class="pill">
+                <span class="dot" style="background: var(--good)"></span>정답
+                <span id="correct" class="score">0</span>
+              </div>
+              <div class="pill">
+                <span class="dot" style="background: var(--bad)"></span>오답
+                <span id="wrong" class="score">0</span>
+              </div>
+              <div class="spacer"></div>
+              <button id="btnStart" class="primary">게임 시작</button>
+              <button id="btnReplay" class="small" title="소리 다시 듣기">
+                재생 ⟳
+              </button>
+              <button id="btnNext" class="small" title="다음 문제">
+                다음 ▶
+              </button>
+            </div>
+
+            <div class="circle" id="pad" aria-label="방향 선택 패드">
+              <div class="center" title="당신"></div>
+              <!-- 8방향 버튼 -->
+              <div class="dir" style="left: 50%; top: 8%">
+                <button data-ans="N">앞(북)</button>
+              </div>
+              <div class="dir" style="left: 85%; top: 20%">
+                <button data-ans="NE">앞-오른쪽</button>
+              </div>
+              <div class="dir" style="left: 92%; top: 50%">
+                <button data-ans="E">오른쪽(동)</button>
+              </div>
+              <div class="dir" style="left: 85%; top: 80%">
+                <button data-ans="SE">뒤-오른쪽</button>
+              </div>
+              <div class="dir" style="left: 50%; top: 92%">
+                <button data-ans="S">뒤(남)</button>
+              </div>
+              <div class="dir" style="left: 15%; top: 80%">
+                <button data-ans="SW">뒤-왼쪽</button>
+              </div>
+              <div class="dir" style="left: 8%; top: 50%">
+                <button data-ans="W">왼쪽(서)</button>
+              </div>
+              <div class="dir" style="left: 15%; top: 20%">
+                <button data-ans="NW">앞-왼쪽</button>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top: 12px">
+              <label
+                class="pill"
+                title="기기 제약으로 자동 재생이 막힐 수 있어요."
+                ><input
+                  type="checkbox"
+                  id="chkEar"
+                  style="accent-color: #7c9cff; margin-right: 8px"
+                />
+                이어폰/헤드폰을 착용했어요</label
+              >
+              <div class="spacer"></div>
+              <span class="muted"
+                >라운드 <span id="round">0</span>/<span id="total"
+                  >10</span
+                ></span
+              >
+            </div>
+          </section>
+
+          <aside class="panel" aria-labelledby="help-title">
+            <h3 id="help-title">도움말 & 설정</h3>
+            <p class="muted">
+              소리를 듣고 <b>어느 방향에서 들렸는지</b> 버튼을 눌러 맞춰보세요.
+            </p>
+
+            <div class="row" style="margin: 12px 0">
+              <label class="pill"
+                ><span class="muted">라운드 수</span>
+                <input
+                  id="rounds"
+                  type="range"
+                  min="4"
+                  max="20"
+                  value="10"
+                  step="1"
+                  style="margin: 0 10px"
+                />
+                <span id="roundsVal" class="kbd">10</span>
+              </label>
+              <label class="pill"
+                ><span class="muted">난이도</span>
+                <select id="difficulty" class="kbd" style="margin-left: 8px">
+                  <option value="easy">쉬움(좌/우/앞/뒤)</option>
+                  <option value="normal" selected>보통(8방향)</option>
+                  <option value="hard">어려움(8방향 + 거리)</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="panel" style="background: #0f1731">
+              <h3>🔧 캘리브레이션</h3>
+              <p class="muted">
+                채널 확인: 좌/우/앞/뒤 방향으로 1초 톤이 재생됩니다.
+              </p>
+              <div class="row">
+                <button id="calL">좌</button>
+                <button id="calR">우</button>
+                <button id="calF">앞</button>
+                <button id="calB">뒤</button>
+                <div class="spacer"></div>
+                <label class="pill"
+                  >볼륨
+                  <input
+                    id="volume"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value="0.6"
+                    style="margin-left: 8px"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div class="panel" style="margin-top: 12px; background: #0f1731">
+              <h3>ℹ️ 주의</h3>
+              <ul class="muted" style="margin: 8px 0 0 18px">
+                <li>
+                  모바일 기기에서는 <b>버튼을 한 번 눌러야</b> 소리가
+                  재생됩니다.
+                </li>
+                <li>
+                  브라우저 별 공간 음향 처리( <code>PannerNode</code> )가 다를
+                  수 있어 정답률에 차이가 납니다.
+                </li>
+              </ul>
+            </div>
+          </aside>
+        </main>
+
+        <div class="footer">
+          제작: 공간 음향 테스트 · Web Audio API (HRTF) 사용 · 오픈소스/사적
+          사용 자유 · <a href="#" id="btnExport">결과 내보내기(.json)</a>
+        </div>
+      </div>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <script>
+      // ===== Web Audio Setup =====
+      const AudioKit = (() => {
+        let ctx, masterGain;
+        const ensure = async () => {
+          if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)({
+              latencyHint: "interactive",
+            });
+            masterGain = ctx.createGain();
+            masterGain.gain.value = parseFloat(
+              localStorage.getItem("vol") || "0.6"
+            );
+            masterGain.connect(ctx.destination);
+          }
+          if (ctx.state === "suspended") {
+            try {
+              await ctx.resume();
+            } catch (e) {}
+          }
+          return { ctx, masterGain };
+        };
+
+        const playBeep = async (
+          pos = { x: 0, y: 0, z: -1 },
+          duration = 0.9,
+          dir = null
+        ) => {
+          const { ctx } = await ensure();
+          const osc = ctx.createOscillator();
+          const env = ctx.createGain();
+          const panner = new PannerNode(ctx, {
+            panningModel: "HRTF",
+            distanceModel: "inverse",
+            positionX: pos.x,
+            positionY: pos.y,
+            positionZ: pos.z,
+            orientationX: 0,
+            orientationY: 0,
+            orientationZ: -1,
+            refDistance: 0.5,
+            maxDistance: 15,
+            rolloffFactor: 1.6,
+            coneInnerAngle: 360,
+            coneOuterAngle: 0,
+            coneOuterGain: 0,
+          });
+          const stPan = ctx.createStereoPanner(); // 좌/우 분리 강화를 위한 보조 팬
+
+          // 방향별 주파수 및 효과 구분
+          const now = ctx.currentTime;
+          // 기본값
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(750, now);
+          osc.frequency.linearRampToValueAtTime(1200, now + duration);
+
+          // 전/후/측 판단 및 톤 보정
+          if (dir === "N") {
+            // 앞쪽: 고주파 스윕, 밝게
+            osc.frequency.setValueAtTime(1000, now);
+            osc.frequency.linearRampToValueAtTime(2000, now + duration);
+            const hs = ctx.createBiquadFilter();
+            hs.type = "highshelf";
+            hs.frequency.value = 3500;
+            hs.gain.value = 4;
+            env.connect(hs);
+            hs.connect(panner);
+          } else if (dir === "S" || dir === "SE" || dir === "SW") {
+            // 뒤쪽: 저주파 스윕 + 약한 잔향 + 스테레오 팬
+            osc.frequency.setValueAtTime(250, now);
+            osc.frequency.linearRampToValueAtTime(700, now + duration);
+            const lp = ctx.createBiquadFilter();
+            lp.type = "lowpass";
+            lp.frequency.value = 2600;
+            lp.Q.value = 0.7; // 약간 더 밝게 유지해 좌/우 단서 확보
+
+            // 아주 짧은 딜레이 기반 잔향 (간단한 리버브)
+            const delay = ctx.createDelay();
+            delay.delayTime.value = 0.08;
+            const feedback = ctx.createGain();
+            feedback.gain.value = 0.28;
+            delay.connect(feedback).connect(delay);
+
+            // 뒤쪽에서 좌/우 구분 강화: 방향에 따라 약간의 팬을 준다
+            let panVal = 0;
+            if (dir === "SW") panVal = -0.28; // 뒤-왼쪽이면 왼쪽으로 살짝
+            if (dir === "SE") panVal = 0.28; // 뒤-오른쪽이면 오른쪽으로 살짝
+            // 순수 뒤(S)는 0, 필요하면 rounds 높을 때 -0.1~0.1 랜덤도 가능
+            stPan.pan.value = panVal;
+
+            env.connect(lp).connect(panner).connect(stPan).connect(masterGain);
+            // 웻 신호: 약하게 섞기
+            panner.connect(delay).connect(masterGain);
+          } else {
+            // 좌/우/대각 등 기본값
+            env.connect(panner);
+            panner.connect(masterGain);
+          }
+
+          // 엔벌로프
+          env.gain.setValueAtTime(0.0001, now);
+          env.gain.linearRampToValueAtTime(masterGain.gain.value, now + 0.02);
+          env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+          // 오실레이터 연결 및 재생
+          osc.connect(env);
+          osc.start(now);
+          osc.stop(now + duration + 0.05);
+          return new Promise((res) => {
+            osc.onended = res;
+          });
+        };
+
+        const setVolume = async (v) => {
+          await ensure();
+          masterGain.gain.value = v;
+          localStorage.setItem("vol", String(v));
+        };
+
+        const posFromDirection = (dir, difficulty = "normal") => {
+          const base = 1.2; // radius
+          let map = {
+            N: { x: 0, y: 0, z: -base },
+            NE: { x: base * 0.8, y: 0, z: -base * 0.8 },
+            E: { x: base, y: 0, z: 0 },
+            SE: { x: base * 0.8, y: 0, z: base * 0.8 },
+            S: { x: 0, y: 0, z: base },
+            SW: { x: -base * 0.8, y: 0, z: base * 0.8 },
+            W: { x: -base, y: 0, z: 0 },
+            NW: { x: -base * 0.8, y: 0, z: -base * 0.8 },
+          };
+          if (difficulty === "easy") {
+            map = { N: map.N, E: map.E, S: map.S, W: map.W };
+          }
+          if (difficulty === "hard") {
+            const d = 0.7 + Math.random() * 1.8;
+            for (const k in map) {
+              map[k] = { x: map[k].x * d, y: 0, z: map[k].z * d };
+            }
+          }
+          return map[dir];
+        };
+
+        return { ensure, playBeep, setVolume, posFromDirection };
+      })();
+
+      // ===== Game Logic =====
+
+      const UI = {
+        correct: document.getElementById("correct"),
+        wrong: document.getElementById("wrong"),
+        start: document.getElementById("btnStart"),
+        replay: document.getElementById("btnReplay"),
+        next: document.getElementById("btnNext"),
+        pad: document.getElementById("pad"),
+        toast: document.getElementById("toast"),
+        chkEar: document.getElementById("chkEar"),
+        rounds: document.getElementById("rounds"),
+        roundsVal: document.getElementById("roundsVal"),
+        roundNow: document.getElementById("round"),
+        total: document.getElementById("total"),
+        diff: document.getElementById("difficulty"),
+        volume: document.getElementById("volume"),
+        exportBtn: document.getElementById("btnExport"),
+        calL: document.getElementById("calL"),
+        calR: document.getElementById("calR"),
+        calF: document.getElementById("calF"),
+        calB: document.getElementById("calB"),
+      };
+
+      const ALL_DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+
+      const state = {
+        started: false,
+        difficulty: "normal",
+        total: 10,
+        round: 0,
+        score: { c: 0, w: 0 },
+        currentDir: null,
+        history: [], // {round, dir, answer, correct, ts}
+        lock: false,
+      };
+
+      function setToast(msg) {
+        UI.toast.textContent = msg;
+        UI.toast.classList.add("show");
+        clearTimeout(setToast._t);
+        setToast._t = setTimeout(() => UI.toast.classList.remove("show"), 1500);
+      }
+
+      function shuffle(arr) {
+        return arr.sort(() => Math.random() - 0.5);
+      }
+
+      function pickDirection() {
+        const pool =
+          state.difficulty === "easy" ? ["N", "E", "S", "W"] : ALL_DIRS.slice();
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      async function playCurrent() {
+        if (!state.currentDir) return;
+        const pos = AudioKit.posFromDirection(
+          state.currentDir,
+          state.difficulty
+        );
+        try {
+          await AudioKit.playBeep(pos, 1.0, state.currentDir);
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+
+      async function nextRound() {
+        if (!state.started) return;
+        if (state.round >= state.total) {
+          finishGame();
+          return;
+        }
+        state.round++;
+        UI.roundNow.textContent = state.round;
+        state.currentDir = pickDirection();
+        await playCurrent();
+      }
+
+      function finishGame() {
+        state.started = false;
+        state.lock = true;
+        const rate = Math.round(
+          (state.score.c / Math.max(1, state.score.c + state.score.w)) * 100
+        );
+        setToast(
+          `게임 종료! 정답률 ${rate}% (정답 ${state.score.c} / 오답 ${state.score.w})`
+        );
+        UI.start.textContent = "다시 시작";
+        state.lock = false;
+      }
+
+      async function startGame() {
+        if (!UI.chkEar.checked) {
+          setToast("이어폰/헤드폰 착용을 확인해주세요.");
+          return;
+        }
+        await AudioKit.ensure();
+        state.started = true;
+        state.round = 0;
+        state.score = { c: 0, w: 0 };
+        state.history = [];
+        UI.correct.textContent = "0";
+        UI.wrong.textContent = "0";
+        UI.total.textContent = state.total;
+        UI.start.textContent = "재시작";
+        setToast("시작! 소리를 듣고 방향을 선택하세요.");
+        nextRound();
+      }
+
+      function answer(dir) {
+        if (!state.started || !state.currentDir) return;
+        const ok = dir === state.currentDir;
+        if (ok) {
+          state.score.c++;
+          UI.correct.textContent = state.score.c;
+          setToast("정답! ✅");
+        } else {
+          state.score.w++;
+          UI.wrong.textContent = state.score.w;
+          setToast(`오답 ❌ (정답: ${labelOf(state.currentDir)})`);
+        }
+        state.history.push({
+          round: state.round,
+          dir: state.currentDir,
+          answer: dir,
+          correct: ok,
+          ts: Date.now(),
+        });
+        // 다음 문제로
+        nextRound();
+      }
+
+      function labelOf(d) {
+        return (
+          {
+            N: "앞",
+            NE: "앞-오른쪽",
+            E: "오른쪽",
+            SE: "뒤-오른쪽",
+            S: "뒤",
+            SW: "뒤-왼쪽",
+            W: "왼쪽",
+            NW: "앞-왼쪽",
+          }[d] || d
+        );
+      }
+
+      // ===== UI Wiring =====
+      UI.rounds.addEventListener("input", (e) => {
+        state.total = parseInt(e.target.value, 10);
+        UI.roundsVal.textContent = String(state.total);
+        UI.total.textContent = String(state.total);
+      });
+      UI.diff.addEventListener("change", (e) => {
+        state.difficulty = e.target.value;
+        setToast(`난이도: ${e.target.selectedOptions[0].textContent}`);
+      });
+      UI.volume.addEventListener("input", async (e) => {
+        await AudioKit.setVolume(parseFloat(e.target.value));
+      });
+      UI.start.addEventListener("click", startGame);
+      UI.replay.addEventListener("click", playCurrent);
+      UI.next.addEventListener("click", nextRound);
+
+      UI.exportBtn.addEventListener("click", () => {
+        const blob = new Blob(
+          [
+            JSON.stringify(
+              {
+                when: new Date().toISOString(),
+                total: state.total,
+                difficulty: state.difficulty,
+                score: state.score,
+                history: state.history,
+              },
+              null,
+              2
+            ),
+          ],
+          { type: "application/json" }
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `spatial-audio-result-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // Direction buttons
+      document.querySelectorAll(".dir button").forEach((btn) => {
+        btn.addEventListener("click", () => answer(btn.dataset.ans));
+      });
+
+      // Calibration buttons
+      UI.calL.addEventListener("click", () =>
+        AudioKit.playBeep({ x: -1.5, y: 0, z: 0 }, 0.9)
+      );
+      UI.calR.addEventListener("click", () =>
+        AudioKit.playBeep({ x: 1.5, y: 0, z: 0 }, 0.9)
+      );
+      UI.calF.addEventListener("click", () =>
+        AudioKit.playBeep({ x: 0, y: 0, z: -1.5 }, 0.9)
+      );
+      UI.calB.addEventListener("click", () =>
+        AudioKit.playBeep({ x: 0, y: 0, z: 1.5 }, 0.9)
+      );
+
+      // Persist volume
+      (function init() {
+        const vol = parseFloat(localStorage.getItem("vol") || "0.6");
+        UI.volume.value = String(vol);
+        UI.total.textContent = String(state.total);
+      })();
+
+      // Accessibility: keyboard hints
+      window.addEventListener("keydown", (e) => {
+        const map = {
+          ArrowUp: "N",
+          ArrowRight: "E",
+          ArrowDown: "S",
+          ArrowLeft: "W",
+        };
+        if (map[e.key]) {
+          answer(map[e.key]);
+        }
+        if (e.key === "r") playCurrent();
+        if (e.key === "n") nextRound();
+        if (e.key === "Enter") startGame();
+      });
+    </script>
+  </body>
+</html>
