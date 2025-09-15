@@ -1,7 +1,8 @@
 import { BaseScene } from "./BaseScene.js";
-import { INGREDIENTS, PALATES, RECIPES } from "../data/GameData.js";
-import { UI_CONFIG, GAME_EVENTS } from "../data/Config.js";
+import { Ingredient, INGREDIENTS, PALATES, RECIPES } from "../data/GameData.js";
+import { UI_CONFIG, GAME_EVENTS, Direction } from "../data/Config.js";
 import { CookingGameLogic } from "../logic/CookingGameLogic.js";
+import { CookingGameState, Recipe } from "../data/Validation.js";
 
 // UI 상수 정의
 const COOKING_UI_CONSTANTS = {
@@ -63,9 +64,12 @@ const COOKING_UI_CONSTANTS = {
   },
 };
 
-export default class CookingScene extends BaseScene {
+export default class CookingScene extends BaseScene<
+  CookingGameState,
+  CookingGameLogic
+> {
   // Game state properties
-  private pantryState: any;
+  private pantryState: Ingredient[] | null;
   private palate: any;
 
   // UI elements
@@ -243,7 +247,7 @@ export default class CookingScene extends BaseScene {
       COOKING_UI_CONSTANTS.POPUP.BORDER_COLOR,
       COOKING_UI_CONSTANTS.POPUP.BORDER_ALPHA
     );
-    this.popupContainer.add(this.popupBg);
+    this.popupContainer?.add(this.popupBg);
   }
 
   /**
@@ -277,11 +281,11 @@ export default class CookingScene extends BaseScene {
     });
     this.closeButton.on("pointerover", () => {
       console.log("닫기 버튼에 마우스 호버됨");
-      this.closeButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_HOVER);
+      this.closeButton?.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_HOVER);
     });
     this.closeButton.on("pointerout", () => {
       console.log("닫기 버튼에서 마우스 벗어남");
-      this.closeButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_BUTTON);
+      this.closeButton?.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_BUTTON);
     });
     // popupContainer에 추가하지 않고 직접 화면에 추가
     // this.popupContainer.add(this.closeButton);
@@ -327,7 +331,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(titleText);
+    this.popupContainer?.add(titleText);
   }
 
   /**
@@ -342,7 +346,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(this.pickCountText);
+    this.popupContainer?.add(this.pickCountText);
   }
 
   /**
@@ -352,12 +356,12 @@ export default class CookingScene extends BaseScene {
   createIngredientGrid() {
     this.ingredientButtons = [];
 
-    this.pantryState.forEach((ingredient, index) => {
+    this.pantryState?.forEach((ingredient, index) => {
       const position = this.calculateIngredientPosition(index);
       const buttonData = this.createIngredientButton(ingredient, position);
 
       this.ingredientButtons.push(buttonData);
-      this.popupContainer.add([
+      this.popupContainer?.add([
         buttonData.card,
         buttonData.icon,
         buttonData.name,
@@ -372,7 +376,7 @@ export default class CookingScene extends BaseScene {
    * @returns {Object} x, y 좌표
    * @private
    */
-  calculateIngredientPosition(index) {
+  calculateIngredientPosition(index: number) {
     const { START_X, START_Y, ITEM_WIDTH, SPACING } =
       COOKING_UI_CONSTANTS.INGREDIENT_GRID;
     return {
@@ -388,7 +392,7 @@ export default class CookingScene extends BaseScene {
    * @returns {Object} 버튼 요소들
    * @private
    */
-  createIngredientButton(ingredient, position) {
+  createIngredientButton(ingredient: Ingredient, position: any) {
     const { ITEM_WIDTH, ITEM_HEIGHT } = COOKING_UI_CONSTANTS.INGREDIENT_GRID;
 
     const card = this.createIngredientCard(
@@ -421,7 +425,7 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   createIngredientCard(
-    ingredient: any,
+    ingredient: Ingredient,
     position: any,
     width: number,
     height: number
@@ -445,7 +449,7 @@ export default class CookingScene extends BaseScene {
    * @returns {Phaser.GameObjects.Image} 아이콘 객체
    * @private
    */
-  createIngredientIcon(ingredient: any, position: any) {
+  createIngredientIcon(ingredient: Ingredient, position: Direction) {
     const imageKey = this.getIngredientImageKey(ingredient.id);
     return this.add
       .image(position.x, position.y - 10, imageKey)
@@ -460,7 +464,7 @@ export default class CookingScene extends BaseScene {
    * @returns {Phaser.GameObjects.Text} 이름 텍스트 객체
    * @private
    */
-  createIngredientName(ingredient: any, position: any) {
+  createIngredientName(ingredient: Ingredient, position: Direction) {
     return this.add
       .text(position.x, position.y + 15, ingredient.name, {
         fontSize: COOKING_UI_CONSTANTS.FONTS.SMALL,
@@ -479,7 +483,12 @@ export default class CookingScene extends BaseScene {
    * @returns {Phaser.GameObjects.Text} 재고 텍스트 객체
    * @private
    */
-  createIngredientStock(ingredient, position, width, height) {
+  createIngredientStock(
+    ingredient: Ingredient,
+    position: Direction,
+    width: number,
+    height: number
+  ) {
     return this.add
       .text(
         position.x + width / 2 - 5,
@@ -500,7 +509,10 @@ export default class CookingScene extends BaseScene {
    * @param {Object} ingredient - 재료 데이터
    * @private
    */
-  setupIngredientCardEvents(card: any, ingredient: any) {
+  setupIngredientCardEvents(
+    card: Phaser.GameObjects.Rectangle,
+    ingredient: Ingredient
+  ) {
     card.on("pointerdown", () => this.pickIngredient(ingredient.id));
     card.on("pointerover", () =>
       card.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CARD_HOVER)
@@ -534,7 +546,7 @@ export default class CookingScene extends BaseScene {
       COOKING_UI_CONSTANTS.COLORS.PLATE_BACKGROUND
     );
     this.plateArea.setStrokeStyle(2, 0xffffff, 0.3);
-    this.popupContainer.add(this.plateArea);
+    this.popupContainer?.add(this.plateArea);
   }
 
   /**
@@ -549,7 +561,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(plateTitle);
+    this.popupContainer?.add(plateTitle);
   }
 
   /**
@@ -591,11 +603,11 @@ export default class CookingScene extends BaseScene {
     });
     this.cookButton.on("pointerover", () => {
       console.log("조리하기 버튼에 마우스 호버됨");
-      this.cookButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_HOVER);
+      this.cookButton?.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_HOVER);
     });
     this.cookButton.on("pointerout", () => {
       console.log("조리하기 버튼에서 마우스 벗어남");
-      this.cookButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_BUTTON);
+      this.cookButton?.setFillStyle(COOKING_UI_CONSTANTS.COLORS.COOK_BUTTON);
     });
     // popupContainer에 추가하지 않고 직접 화면에 추가
     // this.popupContainer.add(this.cookButton);
@@ -709,11 +721,6 @@ export default class CookingScene extends BaseScene {
       }
     });
 
-    // 키보드 이벤트
-    this.input.keyboard.on("keydown", (event) => {
-      console.log("키보드 입력 감지:", event.key);
-    });
-
     // 브라우저 DOM 이벤트도 테스트
     document.addEventListener("click", (event) => {
       console.log("DOM 클릭 이벤트 감지:", event.clientX, event.clientY);
@@ -736,9 +743,9 @@ export default class CookingScene extends BaseScene {
   startGame() {
     console.log("startGame() 메서드 호출됨");
     try {
-      if (this.gameLogic && 'startGame' in this.gameLogic) {
-      (this.gameLogic as any).startGame();
-    }
+      if (this.gameLogic && "startGame" in this.gameLogic) {
+        (this.gameLogic as any).startGame();
+      }
       console.log("게임 로직 시작 완료");
     } catch (error) {
       console.error("게임 시작 중 오류:", error);
@@ -752,10 +759,10 @@ export default class CookingScene extends BaseScene {
    */
   pickIngredient(ingredientId: any) {
     try {
-      const gameState = this.gameLogic.getGameState();
+      const gameState = this.gameLogic?.getGameState();
       if (gameState.gameEnded) return;
 
-      const ingredient = this.pantryState.find(
+      const ingredient = this.pantryState?.find(
         (ing) => ing.id === ingredientId
       );
       if (!ingredient || ingredient.stock <= 0) return;
@@ -764,7 +771,7 @@ export default class CookingScene extends BaseScene {
       ingredient.stock--;
 
       // 게임 로직에 재료 추가
-      if (this.gameLogic && 'addIngredient' in this.gameLogic && (this.gameLogic as any).addIngredient(ingredient)) {
+      if (this.gameLogic?.addIngredient(ingredient)) {
         this.updateUI();
       }
     } catch (error) {
@@ -778,12 +785,11 @@ export default class CookingScene extends BaseScene {
    */
   updateUI() {
     try {
-      const gameState = this.gameLogic.getGameState();
-      const currentPlate = this.gameLogic && 'getCurrentPlate' in this.gameLogic ? (this.gameLogic as any).getCurrentPlate() : null;
-
+      this.gameLogic?.getGameState();
+      const currentPlate = this.gameLogic?.getCurrentPlate();
       this.updateIngredientGrid();
       this.updatePlate();
-      this.updatePickCount(currentPlate);
+      this.updatePickCount(currentPlate || []);
     } catch (error) {
       console.error("UI 업데이트 중 오류:", error);
     }
@@ -795,12 +801,12 @@ export default class CookingScene extends BaseScene {
    */
   updateIngredientGrid() {
     this.ingredientButtons.forEach((button: any) => {
-      const ingredient = this.pantryState.find(
+      const ingredient = this.pantryState?.find(
         (ing) => ing.id === button.ingredient.id
       );
-      button.stock.setText(`${ingredient.stock}`);
+      button.stock.setText(`${ingredient?.stock}`);
 
-      if (ingredient.stock <= 0) {
+      if (ingredient?.stock && ingredient.stock <= 0) {
         button.card.setAlpha(0.45);
         button.card.disableInteractive();
       }
@@ -812,8 +818,8 @@ export default class CookingScene extends BaseScene {
    * @param {Array} currentPlate - 현재 접시의 재료들
    * @private
    */
-  updatePickCount(currentPlate) {
-    this.pickCountText.setText(`선택: ${currentPlate.length}/3`);
+  updatePickCount(currentPlate: Ingredient[]) {
+    this.pickCountText?.setText(`선택: ${currentPlate.length}/3`);
   }
 
   /**
@@ -823,8 +829,14 @@ export default class CookingScene extends BaseScene {
   updatePlate() {
     this.clearPlateItems();
 
-    const currentPlate = this.gameLogic && 'getCurrentPlate' in this.gameLogic ? (this.gameLogic as any).getCurrentPlate() : null;
-    const recipe = this.gameLogic && 'getCurrentRecipe' in this.gameLogic ? (this.gameLogic as any).getCurrentRecipe() : null;
+    const currentPlate =
+      this.gameLogic && "getCurrentPlate" in this.gameLogic
+        ? (this.gameLogic as any).getCurrentPlate()
+        : null;
+    const recipe =
+      this.gameLogic && "getCurrentRecipe" in this.gameLogic
+        ? (this.gameLogic as any).getCurrentRecipe()
+        : null;
 
     if (recipe) {
       this.showCompleteDish(recipe);
@@ -847,14 +859,14 @@ export default class CookingScene extends BaseScene {
    * @param {Object} recipe - 레시피 정보
    * @private
    */
-  showCompleteDish(recipe) {
+  showCompleteDish(recipe: Recipe) {
     const completeDish = this.add
       .image(0, 50, recipe.id)
       .setDisplaySize(120, 120)
       .setOrigin(0.5);
 
     this.plateItems.push(completeDish);
-    this.popupContainer.add(completeDish);
+    this.popupContainer?.add(completeDish);
   }
 
   /**
@@ -862,7 +874,7 @@ export default class CookingScene extends BaseScene {
    * @param {Array} currentPlate - 현재 접시의 재료들
    * @private
    */
-  showIndividualIngredients(currentPlate) {
+  showIndividualIngredients(currentPlate: Ingredient[]) {
     const { ITEM_SPACING } = COOKING_UI_CONSTANTS.PLATE;
     const plateY = 50;
     const startX = (-(currentPlate.length - 1) * ITEM_SPACING) / 2;
@@ -883,7 +895,7 @@ export default class CookingScene extends BaseScene {
    * @param {Object} position - 위치 정보
    * @private
    */
-  createPlateIngredient(ingredient, position) {
+  createPlateIngredient(ingredient: Ingredient, position: Direction) {
     const imageKey = this.getIngredientImageKey(ingredient.id);
     const { ITEM_SIZE } = COOKING_UI_CONSTANTS.PLATE;
 
@@ -893,7 +905,7 @@ export default class CookingScene extends BaseScene {
       .setOrigin(0.5);
 
     this.plateItems.push(item);
-    this.popupContainer.add(item);
+    this.popupContainer?.add(item);
   }
 
   /**
@@ -901,7 +913,7 @@ export default class CookingScene extends BaseScene {
    * @param {string} ingredientId - 재료 ID
    * @returns {string} 이미지 키
    */
-  getIngredientImageKey(ingredientId) {
+  getIngredientImageKey(ingredientId: string) {
     switch (ingredientId) {
       case "rabbit":
         return "rabbit-meat";
@@ -924,7 +936,7 @@ export default class CookingScene extends BaseScene {
   cookDish() {
     console.log("cookDish() 메서드 호출됨");
     try {
-      const gameState = this.gameLogic.getGameState();
+      const gameState = this.gameLogic?.getGameState();
       console.log("현재 게임 상태:", gameState);
 
       if (gameState.gameEnded) {
@@ -932,7 +944,10 @@ export default class CookingScene extends BaseScene {
         return;
       }
 
-      const currentPlate = this.gameLogic && 'getCurrentPlate' in this.gameLogic ? (this.gameLogic as any).getCurrentPlate() : null;
+      const currentPlate =
+        this.gameLogic && "getCurrentPlate" in this.gameLogic
+          ? (this.gameLogic as any).getCurrentPlate()
+          : null;
       console.log("현재 접시 상태:", currentPlate);
 
       if (currentPlate.length === 0) {
@@ -964,8 +979,8 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   disableCookButton() {
-    this.cookButton.disableInteractive();
-    this.cookButton.setAlpha(0.5);
+    this.cookButton?.disableInteractive();
+    this.cookButton?.setAlpha(0.5);
   }
 
   /**
@@ -981,7 +996,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(cookingText);
+    this.popupContainer?.add(cookingText);
     return cookingText;
   }
 
@@ -990,7 +1005,7 @@ export default class CookingScene extends BaseScene {
    * @param {Phaser.GameObjects.Text} cookingText - 조리 중 텍스트
    * @private
    */
-  scheduleCookingCompletion(cookingText) {
+  scheduleCookingCompletion(cookingText: Phaser.GameObjects.Text) {
     this.time.delayedCall(COOKING_UI_CONSTANTS.ANIMATION.COOKING_DELAY, () => {
       this.finishCooking(cookingText);
     });
@@ -1014,7 +1029,7 @@ export default class CookingScene extends BaseScene {
    */
   createFlameEffect() {
     const flame = this.createFlame();
-    this.popupContainer.add(flame);
+    this.popupContainer?.add(flame);
     this.animateFlame(flame);
   }
 
@@ -1040,7 +1055,7 @@ export default class CookingScene extends BaseScene {
    * @param {Phaser.GameObjects.Rectangle} flame - 불꽃 객체
    * @private
    */
-  animateFlame(flame) {
+  animateFlame(flame: Phaser.GameObjects.Rectangle) {
     this.tweens.add({
       targets: flame,
       y: flame.y - 20,
@@ -1061,8 +1076,9 @@ export default class CookingScene extends BaseScene {
       this.cleanupCookingUI(cookingText);
       this.enableCookButton();
 
-      const result = this.gameLogic && 'submitPlate' in this.gameLogic ? (this.gameLogic as any).submitPlate(this.palate) : null;
-      if (result.success) {
+      const result = this.gameLogic?.submitPlate(this.palate);
+
+      if (result?.success) {
         this.handleCookingSuccess(result);
       } else {
         this.handleCookingFailure(result);
@@ -1086,8 +1102,8 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   enableCookButton() {
-    this.cookButton.setInteractive();
-    this.cookButton.setAlpha(1);
+    this.cookButton?.setInteractive();
+    this.cookButton?.setAlpha(1);
   }
 
   /**
@@ -1115,8 +1131,8 @@ export default class CookingScene extends BaseScene {
         Math.max(1, Math.floor(result.score / 15)),
       ],
       value: Math.max(1, Math.floor(result.score / 5)),
-      isSpecial: this.gameLogic.getCurrentRecipe() !== null,
-      recipe: this.gameLogic.getCurrentRecipe(),
+      isSpecial: this.gameLogic?.getCurrentRecipe() !== null,
+      recipe: this.gameLogic?.getCurrentRecipe(),
       score: result.score,
     });
     this.showResult(result.score, result.dishName);
@@ -1161,7 +1177,7 @@ export default class CookingScene extends BaseScene {
       COOKING_UI_CONSTANTS.COLORS.RESULT_BACKGROUND
     );
     resultBg.setStrokeStyle(2, 0x4ade80, 0.35);
-    this.popupContainer.add(resultBg);
+    this.popupContainer?.add(resultBg);
   }
 
   /**
@@ -1169,13 +1185,13 @@ export default class CookingScene extends BaseScene {
    * @private
    */
   createResultImage() {
-    const recipe = this.gameLogic && 'getCurrentRecipe' in this.gameLogic ? (this.gameLogic as any).getCurrentRecipe() : null;
+    const recipe = this.gameLogic?.getCurrentRecipe();
     if (recipe) {
       const completeDishImage = this.add
         .image(0, -80, recipe.id)
         .setDisplaySize(100, 100)
         .setOrigin(0.5);
-      this.popupContainer.add(completeDishImage);
+      this.popupContainer?.add(completeDishImage);
     }
   }
 
@@ -1185,7 +1201,7 @@ export default class CookingScene extends BaseScene {
    * @param {string} dishName - 요리 이름
    * @private
    */
-  createResultTexts(score, dishName) {
+  createResultTexts(score: number, dishName: string) {
     this.createResultTitle(dishName);
     this.createResultScore(score);
     this.createInventoryMessage();
@@ -1196,7 +1212,7 @@ export default class CookingScene extends BaseScene {
    * @param {string} dishName - 요리 이름
    * @private
    */
-  createResultTitle(dishName) {
+  createResultTitle(dishName: string) {
     const resultTitle = this.add
       .text(0, -20, `${dishName} 완성! ✨`, {
         fontSize: "20px",
@@ -1204,7 +1220,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(resultTitle);
+    this.popupContainer?.add(resultTitle);
   }
 
   /**
@@ -1212,7 +1228,7 @@ export default class CookingScene extends BaseScene {
    * @param {number} score - 점수
    * @private
    */
-  createResultScore(score) {
+  createResultScore(score: number) {
     const resultMsg = this.add
       .text(0, 10, `점수: ${score}점`, {
         fontSize: COOKING_UI_CONSTANTS.FONTS.LARGE,
@@ -1220,7 +1236,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(resultMsg);
+    this.popupContainer?.add(resultMsg);
   }
 
   /**
@@ -1235,7 +1251,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(inventoryMsg);
+    this.popupContainer?.add(inventoryMsg);
   }
 
   /**
@@ -1269,7 +1285,7 @@ export default class CookingScene extends BaseScene {
     retryButton.on("pointerout", () =>
       retryButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.RETRY_BUTTON)
     );
-    this.popupContainer.add(retryButton);
+    this.popupContainer?.add(retryButton);
 
     const retryText = this.add
       .text(-50, 50, "다시 도전", {
@@ -1278,7 +1294,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(retryText);
+    this.popupContainer?.add(retryText);
   }
 
   /**
@@ -1303,7 +1319,7 @@ export default class CookingScene extends BaseScene {
     closeResultButton.on("pointerout", () =>
       closeResultButton.setFillStyle(COOKING_UI_CONSTANTS.COLORS.CLOSE_BUTTON)
     );
-    this.popupContainer.add(closeResultButton);
+    this.popupContainer?.add(closeResultButton);
 
     const closeText = this.add
       .text(50, 50, "닫기", {
@@ -1312,7 +1328,7 @@ export default class CookingScene extends BaseScene {
         fontFamily: "Arial",
       })
       .setOrigin(0.5);
-    this.popupContainer.add(closeText);
+    this.popupContainer?.add(closeText);
   }
 
   /**
@@ -1340,7 +1356,7 @@ export default class CookingScene extends BaseScene {
       COOKING_UI_CONSTANTS.COLORS.CONFETTI
     );
     confetti.setRotation((Math.random() * Math.PI) / 4);
-    this.popupContainer.add(confetti);
+    this.popupContainer?.add(confetti);
 
     this.animateConfetti(confetti);
   }
@@ -1350,7 +1366,7 @@ export default class CookingScene extends BaseScene {
    * @param {Phaser.GameObjects.Rectangle} confetti - 축하 효과 객체
    * @private
    */
-  animateConfetti(confetti) {
+  animateConfetti(confetti: Phaser.GameObjects.Rectangle) {
     this.tweens.add({
       targets: confetti,
       y: 200,
@@ -1371,9 +1387,7 @@ export default class CookingScene extends BaseScene {
    */
   restartGame() {
     try {
-      if (this.gameLogic && 'resetGame' in this.gameLogic) {
-      (this.gameLogic as any).resetGame();
-    }
+      this.gameLogic?.resetGame();
       this.initializeGameState();
       this.scene.restart();
     } catch (error) {
@@ -1408,7 +1422,7 @@ export default class CookingScene extends BaseScene {
    * @param {string} text - 메시지 텍스트
    * @private
    */
-  addMessage(text) {
+  addMessage(text: string) {
     console.log(text);
   }
 
@@ -1429,7 +1443,7 @@ export default class CookingScene extends BaseScene {
    * @param {Object} data - 요리 완료 데이터
    * @private
    */
-  handleCookingEnd(data) {
+  handleCookingEnd(data: any) {
     // 요리 완료 처리 로직 (필요시 구현)
   }
 

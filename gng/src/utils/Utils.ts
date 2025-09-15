@@ -121,7 +121,8 @@ export function formatScore(score: number): string {
 export function deepClone<T>(obj: T): T {
   if (obj === null || typeof obj !== "object") return obj;
   if (obj instanceof Date) return new Date(obj.getTime()) as unknown as T;
-  if (obj instanceof Array) return obj.map((item) => deepClone(item)) as unknown as T;
+  if (obj instanceof Array)
+    return obj.map((item) => deepClone(item)) as unknown as T;
   if (typeof obj === "object") {
     const cloned = {} as T;
     Object.keys(obj).forEach((key) => {
@@ -130,4 +131,9 @@ export function deepClone<T>(obj: T): T {
     return cloned;
   }
   return obj;
+}
+
+export function strHexToNumber(str: string | number): number {
+  if (typeof str === "number") return str;
+  return parseInt(str.replace("#", ""), 16);
 }

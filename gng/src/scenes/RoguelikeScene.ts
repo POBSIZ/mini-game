@@ -11,7 +11,12 @@ import {
   ITEM_DEFINITIONS,
   type ItemDefinition,
 } from "../data/RoguelikeData.js";
-import { RoguelikeGameLogic } from "../logic/RoguelikeGameLogic.js";
+import {
+  RoguelikeGameLogic,
+  RoguelikeGameState,
+} from "../logic/RoguelikeGameLogic.js";
+import { strHexToNumber } from "@/utils/Utils.js";
+import { Enemy, GameState, Item } from "@/data/Validation.js";
 
 // UI 상수 정의
 const UI_CONSTANTS = {
@@ -68,7 +73,10 @@ const COLORS = {
   COOKING_BUTTON_TEXT: "#ffffff", // 흰색 텍스트로 가독성 향상
 };
 
-export default class RoguelikeScene extends BaseScene {
+export default class RoguelikeScene extends BaseScene<
+  RoguelikeGameState,
+  RoguelikeGameLogic
+> {
   // Map and camera properties
   private mapContainer: Phaser.GameObjects.Container | null;
   private cameraOffsetX: number;
@@ -86,19 +94,21 @@ export default class RoguelikeScene extends BaseScene {
   private cookingButtonText: Phaser.GameObjects.Text | null;
 
   // Input handling
-  private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null;
-  private wasd: any;
-  private spaceKey: Phaser.Input.Keyboard.Key | null;
-  private iKey: Phaser.Input.Keyboard.Key | null;
-  private qKey: Phaser.Input.Keyboard.Key | null;
-  private fKey: Phaser.Input.Keyboard.Key | null;
-  private rKey: Phaser.Input.Keyboard.Key | null;
-  private escKey: Phaser.Input.Keyboard.Key | null;
-  private descendKey: Phaser.Input.Keyboard.Key | null;
-  private numberKeys: { [key: string]: Phaser.Input.Keyboard.Key };
+  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys | null;
+  private wasd?: any;
+  private spaceKey?: Phaser.Input.Keyboard.Key | null;
+  private iKey?: Phaser.Input.Keyboard.Key | null;
+  private qKey?: Phaser.Input.Keyboard.Key | null;
+  private fKey?: Phaser.Input.Keyboard.Key | null;
+  private rKey?: Phaser.Input.Keyboard.Key | null;
+  private escKey?: Phaser.Input.Keyboard.Key | null;
+  private descendKey?: Phaser.Input.Keyboard.Key | null;
+  private numberKeys?: {
+    [key: string]: Phaser.Input.Keyboard.Key | null | undefined;
+  };
 
   // Movement timing
-  private lastMoveTime: number;
+  private lastMoveTime?: number;
   private moveDelay: number;
 
   constructor() {
@@ -559,7 +569,7 @@ export default class RoguelikeScene extends BaseScene {
       height / 2,
       width - 40,
       height - 80,
-      COLORS.BACKGROUND
+      strHexToNumber(COLORS.BACKGROUND)
     );
     this.inventoryPanel.setStrokeStyle(2, COLORS.UI_BORDER);
     this.inventoryPanel.setVisible(false);
@@ -594,7 +604,7 @@ export default class RoguelikeScene extends BaseScene {
       240,
       UI_CONSTANTS.MINIMAP_WIDTH,
       UI_CONSTANTS.MINIMAP_HEIGHT,
-      COLORS.BACKGROUND
+      strHexToNumber(COLORS.BACKGROUND)
     );
     this.minimapPanel.setStrokeStyle(1, COLORS.UI_BORDER);
     this.minimapPanel.setDepth(UI_CONSTANTS.Z_INDEX.UI);
@@ -784,7 +794,7 @@ export default class RoguelikeScene extends BaseScene {
    * @private
    */
   addMessage(text: string, isDanger = false) {
-    this.gameLogic.addMessage(text, isDanger);
+    this.gameLogic?.addMessage(text, isDanger);
     this.updateMessageLog();
   }
 
@@ -796,7 +806,7 @@ export default class RoguelikeScene extends BaseScene {
     if (!this.messageLog) return;
 
     try {
-      const gameState = this.gameLogic.getGameState();
+      const gameState = this.gameLogic?.getGameState();
       if (!gameState || !gameState.messages) {
         console.warn("게임 상태 또는 메시지 데이터가 없습니다.");
         return;
@@ -832,15 +842,15 @@ export default class RoguelikeScene extends BaseScene {
    * 키보드 키 초기화
    */
   initializeKeyboardKeys() {
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.wasd = this.input.keyboard.addKeys("W,S,A,D");
-    this.spaceKey = this.input.keyboard.addKey("SPACE");
-    this.iKey = this.input.keyboard.addKey("I");
-    this.qKey = this.input.keyboard.addKey("Q");
-    this.fKey = this.input.keyboard.addKey("F");
-    this.rKey = this.input.keyboard.addKey("R");
-    this.escKey = this.input.keyboard.addKey("ESC");
-    this.descendKey = this.input.keyboard.addKey("PERIOD"); // > 키
+    this.cursors = this.input.keyboard?.createCursorKeys();
+    this.wasd = this.input.keyboard?.addKeys("W,S,A,D");
+    this.spaceKey = this.input.keyboard?.addKey("SPACE");
+    this.iKey = this.input.keyboard?.addKey("I");
+    this.qKey = this.input.keyboard?.addKey("Q");
+    this.fKey = this.input.keyboard?.addKey("F");
+    this.rKey = this.input.keyboard?.addKey("R");
+    this.escKey = this.input.keyboard?.addKey("ESC");
+    this.descendKey = this.input.keyboard?.addKey("PERIOD"); // > 키
   }
 
   /**
@@ -849,7 +859,7 @@ export default class RoguelikeScene extends BaseScene {
   setupNumberKeys() {
     this.numberKeys = {};
     for (let i = 1; i <= 9; i++) {
-      this.numberKeys[i] = this.input.keyboard.addKey(i.toString());
+      this.numberKeys[i] = this.input.keyboard?.addKey(i.toString());
     }
   }
 
@@ -857,8 +867,8 @@ export default class RoguelikeScene extends BaseScene {
    * 키보드 이벤트 리스너 설정
    */
   setupKeyboardEventListeners() {
-    this.input.keyboard.on("keydown", (event) => {
-      if (this.gameLogic.getGameState().inventoryOpen) {
+    this.input.keyboard?.on("keydown", (event: { key: string }) => {
+      if (this.gameLogic?.getGameState()?.inventoryOpen) {
         const key = event.key;
         if (key >= "1" && key <= "9") {
           const index = parseInt(key) - 1;
@@ -891,7 +901,7 @@ export default class RoguelikeScene extends BaseScene {
     try {
       this.clearMapContainer();
 
-      const gameState = this.gameLogic.getGameState();
+      const gameState = this.gameLogic?.getGameState();
       if (!gameState) {
         console.warn("게임 상태가 없습니다.");
         return;
@@ -932,7 +942,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 렌더링 범위 계산
    */
-  calculateRenderBounds(gameState) {
+  calculateRenderBounds(gameState: GameState) {
     const { SCREEN_WIDTH, SCREEN_HEIGHT } = ROGUELIKE_CONFIG;
 
     return {
@@ -952,7 +962,10 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 맵 타일 렌더링
    */
-  renderMapTiles(gameState, bounds) {
+  renderMapTiles(
+    gameState: GameState,
+    bounds: { startX: number; endX: number; startY: number; endY: number }
+  ) {
     const { TILE_SIZE } = ROGUELIKE_CONFIG;
 
     for (let y = bounds.startY; y < bounds.endY; y++) {
@@ -965,9 +978,14 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 단일 타일 렌더링
    */
-  renderSingleTile(gameState, x, y, tileSize) {
-    const seen = gameState.seen[y][x];
-    const visible = gameState.visible[y][x];
+  renderSingleTile(
+    gameState: GameState,
+    x: number,
+    y: number,
+    tileSize: number
+  ) {
+    const seen = gameState.seen?.[y][x];
+    const visible = gameState.visible?.[y][x];
     const mapValue = gameState.map[y][x];
     const brightness = gameState.brightness ? gameState.brightness[y][x] : 1.0;
 
@@ -984,7 +1002,7 @@ export default class RoguelikeScene extends BaseScene {
             UI_CONSTANTS.TILE_SCALE_FACTOR
         )
         .setAlpha(brightness); // 명도에 따른 투명도 조절
-      this.mapContainer.add(groundSprite);
+      this.mapContainer?.add(groundSprite);
     } else if (mapValue === TILE_TYPES.WALL && seen) {
       // 벽 타일인 경우 이미지 사용
       const wallSprite = this.add
@@ -995,14 +1013,14 @@ export default class RoguelikeScene extends BaseScene {
             UI_CONSTANTS.TILE_SCALE_FACTOR
         )
         .setAlpha(brightness); // 명도에 따른 투명도 조절
-      this.mapContainer.add(wallSprite);
+      this.mapContainer?.add(wallSprite);
     } else {
       // 다른 타일들은 기존 방식으로 렌더링
       const color = this.getTileColor(mapValue, seen, visible);
       const tile = this.add
-        .rectangle(screenX, screenY, tileSize, tileSize, color)
+        .rectangle(screenX, screenY, tileSize, tileSize, strHexToNumber(color))
         .setAlpha(brightness); // 명도에 따른 투명도 조절
-      this.mapContainer.add(tile);
+      this.mapContainer?.add(tile);
     }
 
     // 계단 표시
@@ -1014,7 +1032,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 타일 색상 결정
    */
-  getTileColor(mapValue, seen, visible) {
+  getTileColor(mapValue: number, seen: boolean, visible: boolean) {
     switch (mapValue) {
       case TILE_TYPES.WALL:
         return seen ? COLORS.WALL : COLORS.VOID;
@@ -1034,7 +1052,12 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 계단 렌더링
    */
-  renderStairs(screenX, screenY, tileSize, brightness = 1.0) {
+  renderStairs(
+    screenX: number,
+    screenY: number,
+    tileSize: number,
+    brightness = 1.0
+  ) {
     const stairs = this.add
       .text(screenX, screenY, ">", {
         fontSize: UI_CONSTANTS.TILE_FONT_SIZE,
@@ -1043,22 +1066,27 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5)
       .setAlpha(brightness); // 명도에 따른 투명도 조절
-    this.mapContainer.add(stairs);
+    this.mapContainer?.add(stairs);
   }
 
   /**
    * 아이템 렌더링
    */
-  renderItems(gameState, bounds) {
+  renderItems(
+    gameState: GameState,
+    bounds: { startX: number; endX: number; startY: number; endY: number }
+  ) {
     const { TILE_SIZE } = ROGUELIKE_CONFIG;
 
-    gameState.items.forEach((item) => {
+    gameState.items?.forEach((item) => {
       if (
+        item.y !== undefined &&
+        item.x !== undefined &&
         this.isItemInBounds(item, bounds) &&
-        gameState.visible[item.y][item.x]
+        gameState.visible?.[item.y][item.x]
       ) {
         const brightness = gameState.brightness
-          ? gameState.brightness[item.y][item.x]
+          ? gameState.brightness?.[item.y][item.x]
           : 1.0;
         this.renderSingleItem(item, TILE_SIZE, brightness);
       }
@@ -1068,8 +1096,13 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 아이템이 렌더링 범위 내에 있는지 확인
    */
-  isItemInBounds(item, bounds) {
+  isItemInBounds(
+    item: Item | Enemy,
+    bounds: { startX: number; endX: number; startY: number; endY: number }
+  ) {
     return (
+      item.x !== undefined &&
+      item.y !== undefined &&
       item.x >= bounds.startX &&
       item.x < bounds.endX &&
       item.y >= bounds.startY &&
@@ -1080,10 +1113,10 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 단일 아이템 렌더링
    */
-  renderSingleItem(item, tileSize, brightness = 1.0) {
+  renderSingleItem(item: Item, tileSize: number, brightness = 1.0) {
     const itemType = ITEM_DEFINITIONS[item.type];
-    const screenX = item.x * tileSize;
-    const screenY = item.y * tileSize;
+    const screenX = item.x !== undefined ? item.x * tileSize : 0;
+    const screenY = item.y !== undefined ? item.y * tileSize : 0;
 
     const itemSprite = this.add
       .text(screenX, screenY, itemType.symbol, {
@@ -1093,23 +1126,28 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5)
       .setAlpha(brightness); // 명도에 따른 투명도 조절
-    this.mapContainer.add(itemSprite);
+    this.mapContainer?.add(itemSprite);
   }
 
   /**
    * 함정 렌더링
    */
-  renderTraps(gameState, bounds) {
+  renderTraps(
+    gameState: GameState,
+    bounds: { startX: number; endX: number; startY: number; endY: number }
+  ) {
     const { TILE_SIZE } = ROGUELIKE_CONFIG;
 
-    gameState.traps.forEach((trap) => {
+    gameState.traps?.forEach((trap) => {
       if (
         trap.seen &&
+        trap.y !== undefined &&
+        trap.x !== undefined &&
         this.isItemInBounds(trap, bounds) &&
-        gameState.visible[trap.y][trap.x]
+        gameState.visible?.[trap.y][trap.x]
       ) {
         const brightness = gameState.brightness
-          ? gameState.brightness[trap.y][trap.x]
+          ? gameState.brightness?.[trap.y][trap.x]
           : 1.0;
         this.renderSingleTrap(trap, TILE_SIZE, brightness);
       }
@@ -1119,9 +1157,9 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 단일 함정 렌더링
    */
-  renderSingleTrap(trap, tileSize, brightness = 1.0) {
-    const screenX = trap.x * tileSize;
-    const screenY = trap.y * tileSize;
+  renderSingleTrap(trap: Item, tileSize: number, brightness = 1.0) {
+    const screenX = trap.x !== undefined ? trap.x * tileSize : 0;
+    const screenY = trap.y !== undefined ? trap.y * tileSize : 0;
 
     const trapSprite = this.add
       .text(screenX, screenY, "^", {
@@ -1131,19 +1169,24 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5)
       .setAlpha(brightness); // 명도에 따른 투명도 조절
-    this.mapContainer.add(trapSprite);
+    this.mapContainer?.add(trapSprite);
   }
 
   /**
    * 적 렌더링
    */
-  renderEnemies(gameState, bounds) {
+  renderEnemies(
+    gameState: GameState,
+    bounds: { startX: number; endX: number; startY: number; endY: number }
+  ) {
     const { TILE_SIZE } = ROGUELIKE_CONFIG;
 
-    gameState.enemies.forEach((enemy) => {
+    gameState.enemies?.forEach((enemy) => {
       if (
+        enemy.y !== undefined &&
+        enemy.x !== undefined &&
         this.isItemInBounds(enemy, bounds) &&
-        gameState.visible[enemy.y][enemy.x]
+        gameState.visible?.[enemy.y][enemy.x]
       ) {
         const brightness = gameState.brightness
           ? gameState.brightness[enemy.y][enemy.x]
@@ -1156,9 +1199,9 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 단일 적 렌더링
    */
-  renderSingleEnemy(enemy, tileSize, brightness = 1.0) {
-    const screenX = enemy.x * tileSize;
-    const screenY = enemy.y * tileSize;
+  renderSingleEnemy(enemy: Enemy, tileSize: number, brightness = 1.0) {
+    const screenX = enemy.x !== undefined ? enemy.x * tileSize : 0;
+    const screenY = enemy.y !== undefined ? enemy.y * tileSize : 0;
 
     let enemySprite;
 
@@ -1176,13 +1219,18 @@ export default class RoguelikeScene extends BaseScene {
     }
 
     enemySprite.setAlpha(brightness); // 명도에 따른 투명도 조절
-    this.mapContainer.add(enemySprite);
+    this.mapContainer?.add(enemySprite);
   }
 
   /**
    * 슬라임(토끼) 스프라이트 생성
    */
-  createSlimeSprite(enemy, screenX, screenY, tileSize) {
+  createSlimeSprite(
+    enemy: Enemy,
+    screenX: number,
+    screenY: number,
+    tileSize: number
+  ) {
     const rabbitImageKey =
       enemy.facing === "left" ? "rabbit-left" : "rabbit-right";
     return this.add
@@ -1197,7 +1245,12 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 형광 버섯(고블린) 스프라이트 생성
    */
-  createGlowMushroomSprite(enemy, screenX, screenY, tileSize) {
+  createGlowMushroomSprite(
+    enemy: Enemy,
+    screenX: number,
+    screenY: number,
+    tileSize: number
+  ) {
     const glowMushroomImageKey =
       enemy.facing === "left"
         ? "glow-mushroom-mob-left"
@@ -1214,7 +1267,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 적 텍스트 스프라이트 생성
    */
-  createEnemyTextSprite(enemy, screenX, screenY) {
+  createEnemyTextSprite(enemy: Enemy, screenX: number, screenY: number) {
     const enemyType = ENEMY_TYPES[enemy.type];
     return this.add
       .text(screenX, screenY, enemyType.symbol, {
@@ -1228,7 +1281,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 플레이어 렌더링
    */
-  renderPlayer(gameState) {
+  renderPlayer(gameState: GameState) {
     const { TILE_SIZE } = ROGUELIKE_CONFIG;
     const playerImageKey =
       gameState.player.facing === "left" ? "hero-left" : "hero-right";
@@ -1244,23 +1297,23 @@ export default class RoguelikeScene extends BaseScene {
         (TILE_SIZE / UI_CONSTANTS.IMAGE_SCALE_FACTOR) *
           UI_CONSTANTS.CHARACTER_SCALE_FACTOR
       );
-    this.mapContainer.add(playerSprite);
+    this.mapContainer?.add(playerSprite);
   }
 
   updateHUD() {
-    const gameState = this.gameLogic.getGameState();
-    const p = gameState.player;
-    const wName = gameState.equip.weapon ? gameState.equip.weapon.name : "-";
-    const aName = gameState.equip.armor ? gameState.equip.armor.name : "-";
+    const gameState = this.gameLogic?.getGameState();
+    const p = gameState?.player;
+    const wName = gameState?.equip?.weapon ? gameState.equip.weapon.name : "-";
+    const aName = gameState?.equip?.armor ? gameState.equip.armor.name : "-";
     const hungerState =
-      p.hunger === 0
+      p?.hunger === 0
         ? "굶주림"
-        : p.hunger <= ROGUELIKE_CONFIG.HUNGER_WARN
+        : p?.hunger && p?.hunger <= ROGUELIKE_CONFIG.HUNGER_WARN
         ? "허기"
         : "양호";
 
-    this.hudText.setText(
-      `층수 ${gameState.level} · HP ${p.hp}/${p.max} · 포션 ${
+    this.hudText?.setText(
+      `층수 ${gameState?.level} · HP ${p?.hp}/${p?.max} · 포션 ${
         this.gameLogic && "countItems" in this.gameLogic
           ? (this.gameLogic as any).countItems("potion")
           : 0
@@ -1268,9 +1321,9 @@ export default class RoguelikeScene extends BaseScene {
         this.gameLogic && "countItems" in this.gameLogic
           ? (this.gameLogic as any).countItems("food")
           : 0
-      } · 적 ${gameState.enemies.length} · Lv ${p.level} (EXP ${p.exp}/${
-        p.nextExp
-      }) · 배고픔 ${p.hunger}/${
+      } · 적 ${gameState?.enemies?.length} · Lv ${p?.level} (EXP ${p?.exp}/${
+        p?.nextExp
+      }) · 배고픔 ${p?.hunger}/${
         ROGUELIKE_CONFIG.HUNGER_MAX
       } (${hungerState}) · 무기 ${wName} · 방어구 ${aName}`
     );
@@ -1284,14 +1337,16 @@ export default class RoguelikeScene extends BaseScene {
 
     this.clearMinimap();
 
-    const gameState = this.gameLogic.getGameState();
+    const gameState = this.gameLogic?.getGameState();
     const minimapConfig = this.calculateMinimapConfig();
 
-    this.renderMinimapTiles(gameState, minimapConfig);
-    this.renderMinimapItems(gameState, minimapConfig);
-    this.renderMinimapTraps(gameState, minimapConfig);
-    this.renderMinimapEnemies(gameState, minimapConfig);
-    this.renderMinimapPlayer(gameState, minimapConfig);
+    if (gameState) {
+      this.renderMinimapTiles(gameState, minimapConfig);
+      this.renderMinimapItems(gameState, minimapConfig);
+      this.renderMinimapTraps(gameState, minimapConfig);
+      this.renderMinimapEnemies(gameState, minimapConfig);
+      this.renderMinimapPlayer(gameState, minimapConfig);
+    }
   }
 
   /**
@@ -1335,7 +1390,10 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 미니맵 타일 렌더링
    */
-  renderMinimapTiles(gameState, config) {
+  renderMinimapTiles(
+    gameState: GameState,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
     const { VIEW_WIDTH, VIEW_HEIGHT } = ROGUELIKE_CONFIG;
 
     for (let y = 0; y < VIEW_HEIGHT; y++) {
@@ -1348,10 +1406,15 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 미니맵 단일 타일 렌더링
    */
-  renderMinimapSingleTile(gameState, x, y, config) {
-    const seen = gameState.seen[y][x];
-    const visible = gameState.visible[y][x];
-    const mapValue = gameState.map[y][x];
+  renderMinimapSingleTile(
+    gameState: GameState,
+    x: number,
+    y: number,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
+    const seen = gameState.seen?.[y][x];
+    const visible = gameState.visible?.[y][x];
+    const mapValue = gameState.map?.[y][x];
 
     const minimapX = x * config.tileSize + config.offsetX;
     const minimapY = y * config.tileSize + config.offsetY;
@@ -1366,7 +1429,7 @@ export default class RoguelikeScene extends BaseScene {
             UI_CONSTANTS.TILE_SCALE_FACTOR
         );
       groundSprite.setPosition(minimapX, minimapY);
-      this.minimapContainer.add(groundSprite);
+      this.minimapContainer?.add(groundSprite);
     } else if (mapValue === TILE_TYPES.WALL && seen) {
       // 벽 타일인 경우 이미지 사용
       const wallSprite = this.add
@@ -1377,7 +1440,7 @@ export default class RoguelikeScene extends BaseScene {
             UI_CONSTANTS.TILE_SCALE_FACTOR
         );
       wallSprite.setPosition(minimapX, minimapY);
-      this.minimapContainer.add(wallSprite);
+      this.minimapContainer?.add(wallSprite);
     } else {
       // 다른 타일들은 기존 방식으로 렌더링
       const color = this.getTileColor(mapValue, seen, visible);
@@ -1386,10 +1449,10 @@ export default class RoguelikeScene extends BaseScene {
         0,
         config.tileSize,
         config.tileSize,
-        color
+        strHexToNumber(color)
       );
       tile.setPosition(minimapX, minimapY);
-      this.minimapContainer.add(tile);
+      this.minimapContainer?.add(tile);
     }
 
     // 계단 표시
@@ -1401,7 +1464,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 미니맵 계단 렌더링
    */
-  renderMinimapStairs(minimapX, minimapY, tileSize) {
+  renderMinimapStairs(minimapX: number, minimapY: number, tileSize: number) {
     const stairs = this.add
       .text(0, 0, ">", {
         fontSize: `${tileSize * UI_CONSTANTS.MINIMAP_SCALE_FACTORS.STAIRS}px`,
@@ -1410,15 +1473,22 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5);
     stairs.setPosition(minimapX, minimapY);
-    this.minimapContainer.add(stairs);
+    this.minimapContainer?.add(stairs);
   }
 
   /**
    * 미니맵 아이템 렌더링
    */
-  renderMinimapItems(gameState, config) {
+  renderMinimapItems(
+    gameState: GameState,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
     gameState.items.forEach((item) => {
-      if (gameState.visible[item.y][item.x]) {
+      if (
+        item.y !== undefined &&
+        item.x !== undefined &&
+        gameState.visible?.[item.y][item.x]
+      ) {
         this.renderMinimapSingleItem(item, config);
       }
     });
@@ -1427,10 +1497,15 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 미니맵 단일 아이템 렌더링
    */
-  renderMinimapSingleItem(item, config) {
+  renderMinimapSingleItem(
+    item: Item,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
     const itemType = ITEM_DEFINITIONS[item.type];
-    const minimapX = item.x * config.tileSize + config.offsetX;
-    const minimapY = item.y * config.tileSize + config.offsetY;
+    const minimapX =
+      item.x !== undefined ? item.x * config.tileSize + config.offsetX : 0;
+    const minimapY =
+      item.y !== undefined ? item.y * config.tileSize + config.offsetY : 0;
 
     const itemSprite = this.add
       .text(0, 0, itemType.symbol, {
@@ -1442,15 +1517,23 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5);
     itemSprite.setPosition(minimapX, minimapY);
-    this.minimapContainer.add(itemSprite);
+    this.minimapContainer?.add(itemSprite);
   }
 
   /**
    * 미니맵 함정 렌더링
    */
-  renderMinimapTraps(gameState, config) {
-    gameState.traps.forEach((trap) => {
-      if (trap.seen && gameState.visible[trap.y][trap.x]) {
+  renderMinimapTraps(
+    gameState: GameState,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
+    gameState.traps?.forEach((trap) => {
+      if (
+        trap.seen &&
+        trap.y !== undefined &&
+        trap.x !== undefined &&
+        gameState.visible?.[trap.y][trap.x]
+      ) {
         this.renderMinimapSingleTrap(trap, config);
       }
     });
@@ -1459,9 +1542,14 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 미니맵 단일 함정 렌더링
    */
-  renderMinimapSingleTrap(trap, config) {
-    const minimapX = trap.x * config.tileSize + config.offsetX;
-    const minimapY = trap.y * config.tileSize + config.offsetY;
+  renderMinimapSingleTrap(
+    trap: Item,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
+    const minimapX =
+      trap.x !== undefined ? trap.x * config.tileSize + config.offsetX : 0;
+    const minimapY =
+      trap.y !== undefined ? trap.y * config.tileSize + config.offsetY : 0;
 
     const trapSprite = this.add
       .text(0, 0, "^", {
@@ -1473,15 +1561,22 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5);
     trapSprite.setPosition(minimapX, minimapY);
-    this.minimapContainer.add(trapSprite);
+    this.minimapContainer?.add(trapSprite);
   }
 
   /**
    * 미니맵 적 렌더링
    */
-  renderMinimapEnemies(gameState, config) {
+  renderMinimapEnemies(
+    gameState: GameState,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
     gameState.enemies.forEach((enemy) => {
-      if (gameState.visible[enemy.y][enemy.x]) {
+      if (
+        enemy.y !== undefined &&
+        enemy.x !== undefined &&
+        gameState.visible?.[enemy.y][enemy.x]
+      ) {
         this.renderMinimapSingleEnemy(enemy, config);
       }
     });
@@ -1490,9 +1585,14 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 미니맵 단일 적 렌더링
    */
-  renderMinimapSingleEnemy(enemy, config) {
-    const minimapX = enemy.x * config.tileSize + config.offsetX;
-    const minimapY = enemy.y * config.tileSize + config.offsetY;
+  renderMinimapSingleEnemy(
+    enemy: Enemy,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
+    const minimapX =
+      enemy.x !== undefined ? enemy.x * config.tileSize + config.offsetX : 0;
+    const minimapY =
+      enemy.y !== undefined ? enemy.y * config.tileSize + config.offsetY : 0;
 
     const enemySprite = this.add
       .text(0, 0, "E", {
@@ -1504,13 +1604,16 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5);
     enemySprite.setPosition(minimapX, minimapY);
-    this.minimapContainer.add(enemySprite);
+    this.minimapContainer?.add(enemySprite);
   }
 
   /**
    * 미니맵 플레이어 렌더링
    */
-  renderMinimapPlayer(gameState, config) {
+  renderMinimapPlayer(
+    gameState: GameState,
+    config: { tileSize: number; offsetX: number; offsetY: number }
+  ) {
     const playerX = gameState.player.x * config.tileSize + config.offsetX;
     const playerY = gameState.player.y * config.tileSize + config.offsetY;
 
@@ -1524,15 +1627,15 @@ export default class RoguelikeScene extends BaseScene {
       })
       .setOrigin(0.5);
     playerSprite.setPosition(playerX, playerY);
-    this.minimapContainer.add(playerSprite);
+    this.minimapContainer?.add(playerSprite);
   }
 
   update() {
-    const gameState = this.gameLogic.getGameState();
+    const gameState = this.gameLogic?.getGameState();
 
     if (this.handleGlobalKeys()) return;
-    if (this.handleInventoryKeys(gameState)) return;
-    if (gameState.gameOver) return;
+    if (gameState && this.handleInventoryKeys(gameState)) return;
+    if (gameState?.gameOver) return;
 
     const moved = this.handleMovementInput();
     this.handleActionInput();
@@ -1550,7 +1653,7 @@ export default class RoguelikeScene extends BaseScene {
    * 전역 키 처리 (게임 상태와 관계없이 작동)
    */
   handleGlobalKeys() {
-    if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
+    if (this.rKey && Phaser.Input.Keyboard.JustDown(this.rKey)) {
       console.log("R 키 눌림 - 게임 재시작");
       this.restartGame();
       return true;
@@ -1561,13 +1664,14 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 인벤토리 관련 키 처리
    */
-  handleInventoryKeys(gameState) {
-    if (Phaser.Input.Keyboard.JustDown(this.iKey)) {
+  handleInventoryKeys(gameState: GameState) {
+    if (this.iKey && Phaser.Input.Keyboard.JustDown(this.iKey)) {
       this.toggleInventory();
       return true;
     }
 
     if (
+      this.escKey &&
       Phaser.Input.Keyboard.JustDown(this.escKey) &&
       gameState.inventoryOpen
     ) {
@@ -1586,10 +1690,16 @@ export default class RoguelikeScene extends BaseScene {
    * 이동 입력 처리
    */
   handleMovementInput() {
+    if (!this.gameLogic) return false;
+
     const currentTime = this.time.now;
 
     // 이동 지연 시간 체크
-    if (currentTime - this.lastMoveTime < this.moveDelay) {
+    if (
+      currentTime &&
+      this.lastMoveTime &&
+      currentTime - this.lastMoveTime < this.moveDelay
+    ) {
       return false;
     }
 
@@ -1597,28 +1707,28 @@ export default class RoguelikeScene extends BaseScene {
 
     // 각 방향을 독립적으로 처리 (동시 입력 허용)
     if (this.isLeftKeyPressed()) {
-      this.gameLogic.gameState.player.facing = "left";
+      this.gameLogic.setPlayerFacing("left");
       if (this.gameLogic && "tryMove" in this.gameLogic) {
-        moved = (this.gameLogic as any).tryMove(-1, 0) || moved;
+        moved = this.gameLogic.tryMove(-1, 0) || moved;
       }
     }
 
     if (this.isRightKeyPressed()) {
-      this.gameLogic.gameState.player.facing = "right";
+      this.gameLogic.setPlayerFacing("right");
       if (this.gameLogic && "tryMove" in this.gameLogic) {
-        moved = (this.gameLogic as any).tryMove(1, 0) || moved;
+        moved = this.gameLogic.tryMove(1, 0) || moved;
       }
     }
 
     if (this.isUpKeyPressed()) {
       if (this.gameLogic && "tryMove" in this.gameLogic) {
-        moved = (this.gameLogic as any).tryMove(0, -1) || moved;
+        moved = this.gameLogic.tryMove(0, -1) || moved;
       }
     }
 
     if (this.isDownKeyPressed()) {
       if (this.gameLogic && "tryMove" in this.gameLogic) {
-        moved = (this.gameLogic as any).tryMove(0, 1) || moved;
+        moved = this.gameLogic.tryMove(0, 1) || moved;
       }
     }
 
@@ -1634,13 +1744,13 @@ export default class RoguelikeScene extends BaseScene {
    * 액션 입력 처리
    */
   handleActionInput() {
-    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+    if (this.spaceKey && Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
       if (this.gameLogic && "endTurn" in this.gameLogic) {
         (this.gameLogic as any).endTurn();
       }
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
+    if (this.qKey && Phaser.Input.Keyboard.JustDown(this.qKey)) {
       if (
         this.gameLogic &&
         "usePotion" in this.gameLogic &&
@@ -1652,7 +1762,7 @@ export default class RoguelikeScene extends BaseScene {
       }
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.fKey)) {
+    if (this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
       if (
         this.gameLogic &&
         "eatFood" in this.gameLogic &&
@@ -1664,7 +1774,7 @@ export default class RoguelikeScene extends BaseScene {
       }
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.descendKey)) {
+    if (this.descendKey && Phaser.Input.Keyboard.JustDown(this.descendKey)) {
       if (this.gameLogic && "descend" in this.gameLogic) {
         (this.gameLogic as any).descend();
       }
@@ -1685,28 +1795,28 @@ export default class RoguelikeScene extends BaseScene {
    * 왼쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isLeftKeyPressed() {
-    return this.cursors.left.isDown || this.wasd.A.isDown;
+    return this.cursors?.left.isDown || this.wasd?.A.isDown;
   }
 
   /**
    * 오른쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isRightKeyPressed() {
-    return this.cursors.right.isDown || this.wasd.D.isDown;
+    return this.cursors?.right.isDown || this.wasd?.D.isDown;
   }
 
   /**
    * 위쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isUpKeyPressed() {
-    return this.cursors.up.isDown || this.wasd.W.isDown;
+    return this.cursors?.up.isDown || this.wasd?.W.isDown;
   }
 
   /**
    * 아래쪽 키 입력 확인 (키를 누르고 있는 동안도 감지)
    */
   isDownKeyPressed() {
-    return this.cursors.down.isDown || this.wasd.S.isDown;
+    return this.cursors?.down.isDown || this.wasd?.S.isDown;
   }
 
   // ===========================================
@@ -1717,12 +1827,13 @@ export default class RoguelikeScene extends BaseScene {
    * @private
    */
   toggleInventory() {
+    if (!this.gameLogic) return;
     if (this.gameLogic && "toggleInventory" in this.gameLogic) {
-      (this.gameLogic as any).toggleInventory();
+      this.gameLogic.toggleInventory();
     }
-    const gameState = this.gameLogic.getGameState();
-    this.inventoryPanel.setVisible(gameState.inventoryOpen);
-    this.inventoryText.setVisible(gameState.inventoryOpen);
+    const gameState = this.gameLogic?.getGameState();
+    this.inventoryPanel?.setVisible(gameState.inventoryOpen);
+    this.inventoryText?.setVisible(gameState.inventoryOpen);
 
     if (gameState.inventoryOpen) {
       this.renderInventory();
@@ -1730,18 +1841,19 @@ export default class RoguelikeScene extends BaseScene {
   }
 
   renderInventory() {
+    if (!this.gameLogic) throw new Error("Game logic is not initialized");
     const gameState = this.gameLogic.getGameState();
     const items = gameState.inventory
       .map((item, index) => this.formatInventoryItem(item, index))
       .join("\n");
 
-    this.inventoryText.setText(items || "(비어 있음)");
+    this.inventoryText?.setText(items || "(비어 있음)");
   }
 
   /**
    * 인벤토리 아이템 포맷팅
    */
-  formatInventoryItem(item, index) {
+  formatInventoryItem(item: Item, index: number) {
     const itemInfo = this.getItemInfo(item);
     return `${index + 1}. ${itemInfo.icon} ${itemInfo.name} (${itemInfo.meta})`;
   }
@@ -1749,7 +1861,7 @@ export default class RoguelikeScene extends BaseScene {
   /**
    * 아이템 정보 추출
    */
-  getItemInfo(item) {
+  getItemInfo(item: Item) {
     switch (item.type) {
       case "potion":
         return {
@@ -1910,9 +2022,9 @@ export default class RoguelikeScene extends BaseScene {
    * @param {boolean} [dishItem.isSpecial=false] - 특별 아이템 여부
    * @private
    */
-  addDishToInventory(dishItem) {
+  addDishToInventory(dishItem: Item) {
     // 게임 로직에 요리 아이템 추가
-    const success = this.gameLogic.addItemToInventory(dishItem);
+    const success = this.gameLogic?.addItemToInventory(dishItem);
 
     if (success) {
       this.addMessage(
@@ -1921,7 +2033,7 @@ export default class RoguelikeScene extends BaseScene {
       );
 
       // 인벤토리가 열려있다면 업데이트
-      if (this.gameLogic.getGameState().inventoryOpen) {
+      if (this.gameLogic?.getGameState().inventoryOpen) {
         this.renderInventory();
       }
 

@@ -11,11 +11,7 @@ import {
   type Weapon,
   type Armor,
 } from "../data/RoguelikeData.js";
-import {
-  type Player,
-  type Enemy,
-  type Item,
-} from "../data/Validation.js";
+import { type Player, type Enemy, type Item } from "../data/Validation.js";
 
 // 방 타입 정의
 interface Room {
@@ -44,7 +40,7 @@ interface Equipment {
 }
 
 // 로그라이크 게임 상태 타입 정의
-interface RoguelikeGameState {
+export interface RoguelikeGameState {
   level: number;
   map: number[][];
   seen: boolean[][];
@@ -61,7 +57,7 @@ interface RoguelikeGameState {
   inventoryOpen: boolean;
 }
 
-export class RoguelikeGameLogic extends BaseGameLogic {
+export class RoguelikeGameLogic extends BaseGameLogic<RoguelikeGameState> {
   constructor() {
     super();
     this.init();
@@ -112,6 +108,8 @@ export class RoguelikeGameLogic extends BaseGameLogic {
    */
   public generateLevel(): void {
     const { VIEW_WIDTH, VIEW_HEIGHT } = ROGUELIKE_CONFIG;
+
+    if (!this.gameState) throw new Error("Game state is not initialized");
 
     // 맵 초기화
     this.gameState.map = Array.from({ length: VIEW_HEIGHT }, () =>

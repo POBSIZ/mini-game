@@ -118,7 +118,10 @@ export const ENEMY_TYPES: Record<string, EnemyType> = {
 };
 
 // 아이템 타입 정의
-export const ITEM_DEFINITIONS: Record<ItemType | 'cooked_food', ItemDefinition> = {
+export const ITEM_DEFINITIONS: Record<
+  ItemType | "cooked_food",
+  ItemDefinition
+> = {
   [ITEM_TYPES.POTION]: {
     symbol: "!",
     name: "체력 물약",
@@ -228,6 +231,12 @@ export const ITEM_SPAWN_RULES: Record<ItemType, ItemSpawnRule> = {
     tierModifier: 0.1,
   },
   [ITEM_TYPES.STAIRS]: {
+    minCount: 1,
+    maxCount: 1,
+    spawnChance: 1.0,
+    tierModifier: 0,
+  },
+  [ITEM_TYPES.COOKED_FOOD]: {
     minCount: 1,
     maxCount: 1,
     spawnChance: 1.0,

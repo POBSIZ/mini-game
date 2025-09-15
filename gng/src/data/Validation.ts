@@ -3,7 +3,16 @@
  * 게임 데이터의 유효성을 검증하는 함수들을 제공합니다.
  */
 
-import { ITEM_TYPES, TILE_TYPES, PLAYER_STATES, GAME_MODES, type ItemType, type TileType, type PlayerState, type GameMode } from "./Config.js";
+import {
+  ITEM_TYPES,
+  TILE_TYPES,
+  PLAYER_STATES,
+  GAME_MODES,
+  type ItemType,
+  type TileType,
+  type PlayerState,
+  type GameMode,
+} from "./Config.js";
 
 // 아이템 타입 정의
 export interface Item {
@@ -64,7 +73,7 @@ export interface GameState {
 }
 
 // 요리 게임 상태 타입 정의
-export interface CookingGameState {
+export interface CookingGameState extends GameState {
   currentPlate: any[];
   score: number;
   timeLeft: number;
@@ -116,7 +125,9 @@ export function isValidTileType(tileType: number): tileType is TileType {
 /**
  * 플레이어 상태가 유효한지 검증
  */
-export function isValidPlayerState(playerState: string): playerState is PlayerState {
+export function isValidPlayerState(
+  playerState: string
+): playerState is PlayerState {
   return Object.values(PLAYER_STATES).includes(playerState as PlayerState);
 }
 
@@ -130,7 +141,12 @@ export function isValidGameMode(gameMode: string): gameMode is GameMode {
 /**
  * 좌표가 유효한 범위 내에 있는지 검증
  */
-export function isValidCoordinate(x: number, y: number, maxX: number, maxY: number): boolean {
+export function isValidCoordinate(
+  x: number,
+  y: number,
+  maxX: number,
+  maxY: number
+): boolean {
   return x >= 0 && x < maxX && y >= 0 && y < maxY;
 }
 
@@ -264,7 +280,10 @@ export function isValidRecipe(recipe: any): recipe is Recipe {
 /**
  * 배열의 모든 요소가 유효한지 검증
  */
-export function validateArray<T>(array: any, validator: (item: any) => item is T): array is T[] {
+export function validateArray<T>(
+  array: any,
+  validator: (item: any) => item is T
+): array is T[] {
   if (!Array.isArray(array)) return false;
   return array.every(validator);
 }
@@ -272,7 +291,9 @@ export function validateArray<T>(array: any, validator: (item: any) => item is T
 /**
  * 요리 게임 상태 객체가 유효한지 검증
  */
-export function isValidCookingGameState(gameState: any): gameState is CookingGameState {
+export function isValidCookingGameState(
+  gameState: any
+): gameState is CookingGameState {
   if (!gameState || typeof gameState !== "object") return false;
 
   return (

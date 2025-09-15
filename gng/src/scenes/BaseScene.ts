@@ -3,11 +3,17 @@
  * 모든 게임 씬의 공통 기능을 제공합니다.
  */
 
-import { UI_CONFIG, GAME_EVENTS, type GameEvent } from "../data/Config.js";
+import { GameState } from "@/data/GameData.js";
+import { UI_CONFIG, type GameEvent } from "../data/Config.js";
 import { BaseGameLogic } from "../logic/BaseGameLogic.js";
 
 // UI 요소 타입 정의
 interface UIElement {
+  element?: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text;
+  overlay?: Phaser.GameObjects.Rectangle;
+  victoryText?: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text;
+  instructionText?: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text;
+  gameOverText?: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Text;
   destroy?: () => void;
 }
 
@@ -52,8 +58,11 @@ interface GameSize {
   height: number;
 }
 
-export class BaseScene extends Phaser.Scene {
-  protected gameLogic: BaseGameLogic | null;
+export class BaseScene<
+  S extends GameState,
+  T extends BaseGameLogic<S>
+> extends Phaser.Scene {
+  protected gameLogic: T | null;
   protected uiElements: Map<string, UIElement>;
   protected eventListeners: Map<GameEvent, Array<(data?: any) => void>>;
 
@@ -118,7 +127,12 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 텍스트 생성 헬퍼
    */
-  protected createText(x: number, y: number, text: string, style: TextStyle = {}): Phaser.GameObjects.Text {
+  protected createText(
+    x: number,
+    y: number,
+    text: string,
+    style: TextStyle = {}
+  ): Phaser.GameObjects.Text {
     const devicePixelRatio = window.devicePixelRatio || 1;
     const defaultStyle: TextStyle = {
       fontFamily: UI_CONFIG.FONTS.DEFAULT,
@@ -135,17 +149,17 @@ export class BaseScene extends Phaser.Scene {
    * 버튼 생성 헬퍼
    */
   protected createButton(
-    x: number, 
-    y: number, 
-    text: string, 
-    callback: () => void, 
+    x: number,
+    y: number,
+    text: string,
+    callback: () => void,
     style: ButtonStyle = {}
   ): ButtonObject {
     const defaultStyle: ButtonStyle = {
       width: 120,
       height: 40,
-      backgroundColor: parseInt(UI_CONFIG.COLORS.PRIMARY.replace('#', ''), 16),
-      borderColor: parseInt(UI_CONFIG.COLORS.BORDER.replace('#', ''), 16),
+      backgroundColor: parseInt(UI_CONFIG.COLORS.PRIMARY.replace("#", ""), 16),
+      borderColor: parseInt(UI_CONFIG.COLORS.BORDER.replace("#", ""), 16),
       borderWidth: 2,
       textColor: UI_CONFIG.COLORS.TEXT,
       fontSize: UI_CONFIG.FONTS.SIZES.MEDIUM,
@@ -188,10 +202,16 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 패널 생성 헬퍼
    */
-  protected createPanel(x: number, y: number, width: number, height: number, style: PanelStyle = {}): Phaser.GameObjects.Rectangle {
+  protected createPanel(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    style: PanelStyle = {}
+  ): Phaser.GameObjects.Rectangle {
     const defaultStyle: PanelStyle = {
-      color: parseInt(UI_CONFIG.COLORS.PANEL.replace('#', ''), 16),
-      borderColor: parseInt(UI_CONFIG.COLORS.BORDER.replace('#', ''), 16),
+      color: parseInt(UI_CONFIG.COLORS.PANEL.replace("#", ""), 16),
+      borderColor: parseInt(UI_CONFIG.COLORS.BORDER.replace("#", ""), 16),
       borderWidth: 2,
       alpha: 0.9,
       ...style,
@@ -208,7 +228,10 @@ export class BaseScene extends Phaser.Scene {
         height,
         defaultStyle.borderColor!
       );
-      border.setStrokeStyle(defaultStyle.borderWidth!, defaultStyle.borderColor!);
+      border.setStrokeStyle(
+        defaultStyle.borderWidth!,
+        defaultStyle.borderColor!
+      );
       border.setAlpha(defaultStyle.alpha!);
     }
 
@@ -218,7 +241,10 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 게임 로직 이벤트 리스너 등록
    */
-  protected onGameEvent(eventType: GameEvent, callback: (data?: any) => void): void {
+  protected onGameEvent(
+    eventType: GameEvent,
+    callback: (data?: any) => void
+  ): void {
     if (!this.gameLogic) return;
 
     this.gameLogic.on(eventType, callback, this);
@@ -232,7 +258,10 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 게임 로직 이벤트 리스너 제거
    */
-  protected offGameEvent(eventType: GameEvent, callback: (data?: any) => void): void {
+  protected offGameEvent(
+    eventType: GameEvent,
+    callback: (data?: any) => void
+  ): void {
     if (!this.gameLogic) return;
 
     this.gameLogic.off(eventType, callback, this);
@@ -304,7 +333,9 @@ export class BaseScene extends Phaser.Scene {
   /**
    * 로딩 인디케이터 표시
    */
-  protected showLoading(message: string = "로딩 중..."): Phaser.GameObjects.Text {
+  protected showLoading(
+    message: string = "로딩 중..."
+  ): Phaser.GameObjects.Text {
     const loadingText = this.createText(
       this.cameras.main.centerX,
       this.cameras.main.centerY,
@@ -315,7 +346,7 @@ export class BaseScene extends Phaser.Scene {
       }
     ).setOrigin(0.5);
 
-    this.registerUIElement("loading", loadingText);
+    this.registerUIElement("loading", { element: loadingText });
     return loadingText;
   }
 

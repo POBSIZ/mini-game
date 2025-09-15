@@ -39,7 +39,7 @@ interface SubmitResult {
   notes?: string[];
 }
 
-export class CookingGameLogic extends BaseGameLogic {
+export class CookingGameLogic extends BaseGameLogic<CookingGameState> {
   constructor() {
     super();
     this.init();
@@ -77,6 +77,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 게임 시작
    */
   public startGame(): void {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     this.gameState.gameStarted = true;
     this.gameState.gameEnded = false;
     this.gameState.timeLeft = GAME_CONFIG.TIME_LIMIT;
@@ -88,6 +89,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 게임 종료
    */
   public endGame(): void {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     this.gameState.gameEnded = true;
     this.gameState.gameStarted = false;
     this.addMessage(`게임 종료! 최종 점수: ${this.gameState.score}`);
@@ -101,6 +103,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 재료 추가
    */
   public addIngredient(ingredient: Ingredient): boolean {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return false;
     }
@@ -119,6 +122,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 재료 제거
    */
   public removeIngredient(index: number): boolean {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return false;
     }
@@ -136,6 +140,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 접시 비우기
    */
   public clearPlate(): boolean {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return false;
     }
@@ -149,6 +154,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 점수 계산
    */
   public calculateScore(palate: Palate): ScoreResult {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     const plate = this.gameState.currentPlate;
     const names = plate.map((p: Ingredient) => p.name);
     let score = plate.length * GAME_CONFIG.BASE_POINTS;
@@ -211,6 +217,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 음식 이름 생성 (레시피 시스템 기반)
    */
   public generateDishName(palate: Palate): string {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     const plate = this.gameState.currentPlate;
     const ingredientIds = plate.map((ingredient: Ingredient) => ingredient.id);
 
@@ -249,6 +256,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 현재 접시의 레시피 정보 반환
    */
   public getCurrentRecipe(): Recipe | undefined {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     const plate = this.gameState.currentPlate;
     const ingredientIds = plate.map((ingredient: Ingredient) => ingredient.id);
     return findRecipe(ingredientIds);
@@ -258,6 +266,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 접시 제출
    */
   public submitPlate(palate: Palate): SubmitResult {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     if (this.gameState.gameEnded || !this.gameState.gameStarted) {
       return { success: false, message: "게임이 진행 중이 아닙니다." };
     }
@@ -292,6 +301,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 시간 업데이트
    */
   public updateTime(deltaTime: number): void {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     if (!this.gameState.gameStarted || this.gameState.gameEnded) {
       return;
     }
@@ -327,6 +337,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 메시지 추가 (BaseGameLogic의 addMessage 사용)
    */
   public addMessage(text: string, isDanger: boolean = false): void {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     super.addMessage(text, isDanger);
     // UI 표시를 위해 최근 10개 메시지만 유지
     if (this.gameState.messages.length > 10) {
@@ -349,6 +360,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 현재 접시 반환
    */
   public getCurrentPlate(): Ingredient[] {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     if (!this.isInitialized) {
       console.error("게임이 초기화되지 않았습니다.");
       return [];
@@ -360,6 +372,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 게임이 진행 중인지 확인
    */
   public isGameActive(): boolean {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     return this.gameState.gameStarted && !this.gameState.gameEnded;
   }
 
@@ -367,6 +380,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 게임이 종료되었는지 확인
    */
   public isGameEnded(): boolean {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     return this.gameState.gameEnded;
   }
 
@@ -374,6 +388,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 남은 시간 반환
    */
   public getTimeLeft(): number {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     return Math.max(0, this.gameState.timeLeft);
   }
 
@@ -381,6 +396,7 @@ export class CookingGameLogic extends BaseGameLogic {
    * 현재 점수 반환
    */
   public getScore(): number {
+    if (!this.gameState) throw new Error("Game state is not initialized");
     return this.gameState.score;
   }
 }

@@ -5,7 +5,7 @@
 
 import { EventManager } from "./EventManager.js";
 import { GAME_EVENTS, type GameEvent } from "../data/Config.js";
-import { isValidGameState, type GameState } from "../data/Validation.js";
+import { GameState, isValidGameState } from "../data/Validation.js";
 
 // 메시지 타입 정의
 export interface Message {
@@ -20,9 +20,9 @@ export interface GameOverData {
   score?: number;
 }
 
-export class BaseGameLogic {
+export class BaseGameLogic<T extends GameState> {
   protected eventManager: EventManager;
-  protected gameState: any;
+  protected gameState: T | null;
   protected isInitialized: boolean;
 
   constructor() {
@@ -113,14 +113,22 @@ export class BaseGameLogic {
   /**
    * 이벤트 리스너 등록
    */
-  public on(eventType: GameEvent, callback: (data?: any) => void, context: any = null): void {
+  public on(
+    eventType: GameEvent,
+    callback: (data?: any) => void,
+    context: any = null
+  ): void {
     this.eventManager.on(eventType, callback, context);
   }
 
   /**
    * 이벤트 리스너 제거
    */
-  public off(eventType: GameEvent, callback: (data?: any) => void, context: any = null): void {
+  public off(
+    eventType: GameEvent,
+    callback: (data?: any) => void,
+    context: any = null
+  ): void {
     this.eventManager.off(eventType, callback, context);
   }
 
@@ -139,7 +147,7 @@ export class BaseGameLogic {
       throw new Error("게임이 초기화되지 않았습니다.");
     }
 
-    if (!this.gameState.messages) {
+    if (this.gameState && !this.gameState.messages) {
       this.gameState.messages = [];
     }
 
@@ -149,10 +157,10 @@ export class BaseGameLogic {
       timestamp: Date.now(),
     };
 
-    this.gameState.messages.push(message);
+    this.gameState?.messages.push(message);
 
     // 메시지 개수 제한 (최근 50개만 유지)
-    if (this.gameState.messages.length > 50) {
+    if (this.gameState && this.gameState.messages.length > 50) {
       this.gameState.messages = this.gameState.messages.slice(-50);
     }
 
@@ -182,7 +190,9 @@ export class BaseGameLogic {
       throw new Error("게임이 초기화되지 않았습니다.");
     }
 
-    this.gameState.gameOver = gameOver;
+    if (this.gameState) {
+      this.gameState.gameOver = gameOver;
+    }
 
     if (gameOver) {
       this.emit(GAME_EVENTS.GAME_OVER, { reason });
@@ -196,5 +206,10 @@ export class BaseGameLogic {
     this.eventManager.clear();
     this.gameState = null;
     this.isInitialized = false;
+  }
+
+  public setPlayerFacing(facing: string): void {
+    if (!this.gameState) throw new Error("Game state is not initialized");
+    this.gameState.player.facing = facing;
   }
 }
